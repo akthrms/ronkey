@@ -13,7 +13,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    fn new(input: &str) -> Self {
+    pub fn new(input: &str) -> Self {
         let mut lexer = Lexer {
             input: input.chars().collect(),
             position: 0,

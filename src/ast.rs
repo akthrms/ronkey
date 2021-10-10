@@ -1,11 +1,11 @@
-enum Statement {
-    LetStatement { name: Expression, value: Expression },
+pub enum Statement {
+    LetStatement { name: String, value: Expression },
 }
 
-enum Expression {
+pub enum Expression {
     Identifier { value: String },
 }
 
 pub struct Program {
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
