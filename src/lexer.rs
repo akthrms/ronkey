@@ -40,11 +40,17 @@ impl Lexer {
 
         let token = match self.ch {
             '=' => Token::Assign,
+            '+' => Token::Plus,
+            '-' => Token::Minus,
+            '*' => Token::Asterisk,
+            '/' => Token::Slash,
+            '!' => Token::Bang,
+            '<' => Token::Lt,
+            '>' => Token::Gt,
+            ',' => Token::Comma,
             ';' => Token::Semicolon,
             '(' => Token::LParen,
             ')' => Token::RParen,
-            ',' => Token::Comma,
-            '+' => Token::Plus,
             '{' => Token::LBrace,
             '}' => Token::RBrace,
             '\u{0}' => Token::Eof,
@@ -75,6 +81,11 @@ impl Lexer {
         match ident.as_str() {
             "fn" => Token::Function,
             "let" => Token::Let,
+            "true" => Token::True,
+            "false" => Token::False,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "return" => Token::Return,
             _ => Token::Ident(ident),
         }
     }
@@ -120,6 +131,14 @@ let add = fn(x, y) {
 };
 
 let result = add(five, ten);
+!-/*5;
+5 < 10 > 5;
+
+if (5 < 10) {
+    return true;
+} else {
+    return false;
+}
 ";
 
     let tests = [
@@ -159,6 +178,35 @@ let result = add(five, ten);
         Token::Ident("ten".to_string()),
         Token::RParen,
         Token::Semicolon,
+        Token::Bang,
+        Token::Minus,
+        Token::Slash,
+        Token::Asterisk,
+        Token::Int(5),
+        Token::Semicolon,
+        Token::Int(5),
+        Token::Lt,
+        Token::Int(10),
+        Token::Gt,
+        Token::Int(5),
+        Token::Semicolon,
+        Token::If,
+        Token::LParen,
+        Token::Int(5),
+        Token::Lt,
+        Token::Int(10),
+        Token::RParen,
+        Token::LBrace,
+        Token::Return,
+        Token::True,
+        Token::Semicolon,
+        Token::RBrace,
+        Token::Else,
+        Token::LBrace,
+        Token::Return,
+        Token::False,
+        Token::Semicolon,
+        Token::RBrace,
         Token::Eof,
     ];
 
