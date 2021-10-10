@@ -39,12 +39,24 @@ impl Lexer {
         self.skip_whitespace();
 
         let token = match self.ch {
-            '=' => Token::Assign,
+            '=' => match self.peek_char() {
+                '=' => {
+                    self.read_char();
+                    Token::Eq
+                }
+                _ => Token::Assign,
+            },
             '+' => Token::Plus,
             '-' => Token::Minus,
             '*' => Token::Asterisk,
             '/' => Token::Slash,
-            '!' => Token::Bang,
+            '!' => match self.peek_char() {
+                '=' => {
+                    self.read_char();
+                    Token::Ne
+                }
+                _ => Token::Bang,
+            },
             '<' => Token::Lt,
             '>' => Token::Gt,
             ',' => Token::Comma,
@@ -67,6 +79,14 @@ impl Lexer {
 
         self.read_char();
         token
+    }
+
+    fn peek_char(&self) -> char {
+        if self.read_position >= self.input.len() {
+            0 as char
+        } else {
+            self.input[self.read_position]
+        }
     }
 
     fn read_ident(&mut self) -> Token {
@@ -139,6 +159,9 @@ if (5 < 10) {
 } else {
     return false;
 }
+
+10 == 10;
+10 != 9;
 ";
 
     let tests = [
@@ -207,6 +230,14 @@ if (5 < 10) {
         Token::False,
         Token::Semicolon,
         Token::RBrace,
+        Token::Int(10),
+        Token::Eq,
+        Token::Int(10),
+        Token::Semicolon,
+        Token::Int(10),
+        Token::Ne,
+        Token::Int(9),
+        Token::Semicolon,
         Token::Eof,
     ];
 
