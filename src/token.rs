@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
-    Illegal,
+    Illegal(char),
     Eof,
 
     // 識別子 + リテラル

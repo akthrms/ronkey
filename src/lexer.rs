@@ -54,7 +54,7 @@ impl Lexer {
                 } else if self.is_digit() {
                     return self.read_int();
                 } else {
-                    Token::Illegal
+                    Token::Illegal(self.ch)
                 }
             }
         };
@@ -90,7 +90,7 @@ impl Lexer {
 
         match int.parse() {
             Ok(i) => Token::Int(i),
-            Err(_) => Token::Illegal,
+            Err(_) => Token::Illegal(self.input[start_position]),
         }
     }
 
