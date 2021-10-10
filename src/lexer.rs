@@ -2,7 +2,7 @@ use crate::token::*;
 use std::iter::FromIterator;
 
 /// 字句解析器
-struct Lexer {
+pub struct Lexer {
     input: Vec<char>,
     /// 入力における現在の位置（現在の文字を指し示す）
     position: usize,
@@ -36,7 +36,7 @@ impl Lexer {
         self.read_position += 1;
     }
 
-    fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
         let token = match self.ch {

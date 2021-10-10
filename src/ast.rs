@@ -6,6 +6,6 @@ enum Expression {
     Identifier { value: String },
 }
 
-struct Program {
+pub struct Program {
     statements: Vec<Statement>,
 }
