@@ -1,6 +1,7 @@
 use crate::token::*;
 use std::iter::FromIterator;
 
+/// 字句解析器
 struct Lexer {
     input: Vec<char>,
     /// 入力における現在の位置（現在の文字を指し示す）
