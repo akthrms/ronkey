@@ -41,24 +41,15 @@ let foobar = 838383;
 
     let mut lexer = Lexer::new(input);
     let mut parser = Parser::new(&mut lexer);
-
     let program = parser.parse_program();
 
-    assert_eq!(
-        program.statements.len(),
-        3,
-        "statements does not contain 3 statements. got={}",
-        program.statements.len()
-    );
+    assert_eq!(program.statements.len(), 3);
 
     let tests = ["x", "y", "foobar"];
 
-    for (i, test) in tests.iter().enumerate() {
-        let statement = &program.statements[i];
+    for (statement, test) in program.statements.iter().zip(tests.iter()) {
         match statement {
-            Statement::LetStatement { name, value: _ } => {
-                assert_eq!(name, test, "name not {}. got={}", test, name);
-            }
+            Statement::LetStatement { name, value: _ } => assert_eq!(name, test),
         }
     }
 }
