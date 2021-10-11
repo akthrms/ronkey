@@ -72,7 +72,7 @@ impl<'a> Parser<'a> {
 
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
         let name = match &self.peek_token {
-            Token::Ident(name) => name.to_string(),
+            Token::Ident(s) => s.to_string(),
             _ => {
                 return Err(format!(
                     "expected next token to be Ident, got {} instead",
