@@ -7,7 +7,7 @@ pub enum Statement {
 /// 式
 pub enum Expression {
     /// 文字列
-    Identifier { value: String },
+    Identifier(String),
 }
 
 /// プログラム
