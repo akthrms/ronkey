@@ -10,6 +10,13 @@ pub enum Expression {
     Identifier { value: String },
 }
 
+/// プログラム
 pub struct Program {
     pub statements: Vec<Statement>,
+}
+
+impl Program {
+    pub fn new() -> Self {
+        Self { statements: vec![] }
+    }
 }
