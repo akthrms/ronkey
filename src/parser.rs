@@ -4,6 +4,23 @@ use crate::token::Token;
 
 type ParseError = String;
 
+/// 優先順位
+enum Precedence {
+    Lowest,
+    /// ==
+    Equals,
+    /// > <
+    LessGreater,
+    /// +
+    Sum,
+    /// *
+    Product,
+    /// -x !x
+    Prefix,
+    /// myFunction(x)
+    Call,
+}
+
 struct Parser<'a> {
     lexer: &'a mut Lexer,
     current_token: Token,
@@ -49,7 +66,7 @@ impl<'a> Parser<'a> {
         match self.current_token {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
-            _ => Err(format!("unimplemented token got {}", self.current_token)),
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -59,14 +76,15 @@ impl<'a> Parser<'a> {
         self.expect_peek(&Token::Assign)?;
         self.next_token();
 
+        let expression = self.parse_expression(&Precedence::Lowest)?;
+        let statement = Statement::LetStatement {
+            name,
+            value: expression,
+        };
+
         while self.is_peek_token(&Token::Semicolon) {
             self.next_token();
         }
-
-        let statement = Statement::LetStatement {
-            name,
-            value: Expression::Identifier("temporary value".to_string()),
-        };
 
         Ok(statement)
     }
@@ -74,14 +92,33 @@ impl<'a> Parser<'a> {
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
         self.next_token();
 
+        let expression = self.parse_expression(&Precedence::Lowest)?;
+        let statement = Statement::ReturnStatement(expression);
+
         while self.is_peek_token(&Token::Semicolon) {
             self.next_token();
         }
 
-        let statement =
-            Statement::ReturnStatement(Expression::Identifier("temporary value".to_string()));
+        Ok(statement)
+    }
+
+    fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
+        let expression = self.parse_expression(&Precedence::Lowest)?;
+        let statement = Statement::ExpressionStatement(expression);
+
+        while self.is_peek_token(&Token::Semicolon) {
+            self.next_token();
+        }
 
         Ok(statement)
+    }
+
+    fn parse_expression(&mut self, precedence: &Precedence) -> Result<Expression, ParseError> {
+        match &self.current_token {
+            Token::Ident(value) => Ok(Expression::Identifier(value.clone())),
+            Token::Int(value) => Ok(Expression::Integer(value.clone())),
+            _ => unimplemented!(),
+        }
     }
 
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
@@ -184,4 +221,50 @@ return 993322;
             panic!();
         }
     }
+}
+
+#[test]
+fn test_identifier_statements() {
+    let input = r"
+foobar;
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 1);
+
+    assert_eq!(
+        program.statements[0],
+        Statement::ExpressionStatement(Expression::Identifier("foobar".to_string()))
+    );
+}
+
+#[test]
+fn test_integer_statements() {
+    let input = r"
+5;
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 1);
+
+    assert_eq!(
+        program.statements[0],
+        Statement::ExpressionStatement(Expression::Integer(5))
+    );
 }

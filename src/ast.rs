@@ -1,6 +1,7 @@
 use std::fmt;
 
 /// 文
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     /// let
     LetStatement { name: String, value: Expression },
@@ -21,15 +22,19 @@ impl fmt::Display for Statement {
 }
 
 /// 式
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     /// 文字列
     Identifier(String),
+    /// 数値
+    Integer(isize),
 }
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expression::Identifier(value) => write!(f, "{}", value),
+            Expression::Integer(value) => write!(f, "{}", value),
         }
     }
 }
