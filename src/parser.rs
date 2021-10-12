@@ -48,6 +48,7 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match self.current_token {
             Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
             _ => Err(format!("unimplemented token got {}", self.current_token)),
         }
     }
@@ -70,9 +71,22 @@ impl<'a> Parser<'a> {
         Ok(statement)
     }
 
+    fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
+        self.next_token();
+
+        while self.is_peek_token(&Token::Semicolon) {
+            self.next_token();
+        }
+
+        let statement =
+            Statement::ReturnStatement(Expression::Identifier("temporary value".to_string()));
+
+        Ok(statement)
+    }
+
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
-        let name = match &self.peek_token {
-            Token::Ident(s) => s.to_string(),
+        let value = match &self.peek_token {
+            Token::Ident(value) => value.to_string(),
             _ => {
                 return Err(format!(
                     "expected next token to be Ident, got {} instead",
@@ -82,7 +96,7 @@ impl<'a> Parser<'a> {
         };
 
         self.next_token();
-        Ok(name)
+        Ok(value)
     }
 
     fn expect_peek(&mut self, token: &Token) -> Result<(), ParseError> {
@@ -126,14 +140,48 @@ let foobar = 838383;
     let mut parser = Parser::new(&mut lexer);
     let program = parser.parse_program();
 
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
     assert_eq!(parser.errors.len(), 0);
     assert_eq!(program.statements.len(), 3);
 
     let tests = ["x", "y", "foobar"];
 
     for (statement, test) in program.statements.iter().zip(tests.iter()) {
-        match statement {
-            Statement::LetStatement { name, .. } => assert_eq!(name, test),
+        if let Statement::LetStatement { name, .. } = statement {
+            assert_eq!(name, test);
+        } else {
+            panic!();
+        }
+    }
+}
+
+#[test]
+fn test_return_statements() {
+    let input = r"
+return 5;
+return 10;
+return 993322;
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 3);
+
+    for statement in program.statements.iter() {
+        if let Statement::ReturnStatement(_) = statement {
+            assert!(true);
+        } else {
+            panic!();
         }
     }
 }

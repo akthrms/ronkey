@@ -2,6 +2,8 @@
 pub enum Statement {
     /// let
     LetStatement { name: String, value: Expression },
+    /// return
+    ReturnStatement(Expression),
 }
 
 /// 式
