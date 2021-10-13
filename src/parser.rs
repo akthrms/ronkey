@@ -186,12 +186,12 @@ let foobar = 838383;
 
     let tests = [("x", 5), ("y", 10), ("foobar", 838383)];
 
-    for (statement, test) in program.statements.iter().zip(tests) {
+    for (statement, (name, value)) in program.statements.iter().zip(tests) {
         assert_eq!(
             statement,
             &Statement::LetStatement {
-                name: test.0.to_string(),
-                value: Expression::Integer(test.1)
+                name: name.to_string(),
+                value: Expression::Integer(value)
             }
         );
     }
