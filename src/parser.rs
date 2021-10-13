@@ -76,11 +76,8 @@ impl<'a> Parser<'a> {
         self.expect_peek(&Token::Assign)?;
         self.next_token();
 
-        let expression = self.parse_expression(&Precedence::Lowest)?;
-        let statement = Statement::LetStatement {
-            name,
-            value: expression,
-        };
+        let value = self.parse_expression(&Precedence::Lowest)?;
+        let statement = Statement::Let { name, value };
 
         while self.is_peek_token(&Token::Semicolon) {
             self.next_token();
@@ -93,7 +90,7 @@ impl<'a> Parser<'a> {
         self.next_token();
 
         let expression = self.parse_expression(&Precedence::Lowest)?;
-        let statement = Statement::ReturnStatement(expression);
+        let statement = Statement::Return(expression);
 
         while self.is_peek_token(&Token::Semicolon) {
             self.next_token();
@@ -104,7 +101,7 @@ impl<'a> Parser<'a> {
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
         let expression = self.parse_expression(&Precedence::Lowest)?;
-        let statement = Statement::ExpressionStatement(expression);
+        let statement = Statement::Expression(expression);
 
         while self.is_peek_token(&Token::Semicolon) {
             self.next_token();
@@ -117,8 +114,25 @@ impl<'a> Parser<'a> {
         match &self.current_token {
             Token::Ident(value) => Ok(Expression::Identifier(value.clone())),
             Token::Int(value) => Ok(Expression::Integer(value.clone())),
-            _ => unimplemented!(),
+            Token::Bang | Token::Minus => self.parse_prefix_expression(),
+            _ => Err(format!(
+                "no prefix parse function for {} found",
+                self.current_token
+            )),
         }
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
+        let operator = self.current_token.clone();
+
+        self.next_token();
+
+        let right = Box::new(self.parse_expression(&Precedence::Prefix)?);
+        let expression = Expression::Prefix { operator, right };
+
+        self.next_token();
+
+        Ok(expression)
     }
 
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
@@ -184,16 +198,14 @@ let foobar = 838383;
     assert_eq!(parser.errors.len(), 0);
     assert_eq!(program.statements.len(), 3);
 
-    let tests = [("x", 5), ("y", 10), ("foobar", 838383)];
+    let tests = [
+        ("x".to_string(), Expression::Integer(5)),
+        ("y".to_string(), Expression::Integer(10)),
+        ("foobar".to_string(), Expression::Integer(838383)),
+    ];
 
     for (statement, (name, value)) in program.statements.iter().zip(tests) {
-        assert_eq!(
-            statement,
-            &Statement::LetStatement {
-                name: name.to_string(),
-                value: Expression::Integer(value)
-            }
-        );
+        assert_eq!(statement, &Statement::Let { name, value });
     }
 }
 
@@ -216,18 +228,19 @@ return 993322;
     assert_eq!(parser.errors.len(), 0);
     assert_eq!(program.statements.len(), 3);
 
-    let tests = [5, 10, 993322];
+    let tests = [
+        Expression::Integer(5),
+        Expression::Integer(10),
+        Expression::Integer(993322),
+    ];
 
-    for (statement, test) in program.statements.iter().zip(tests) {
-        assert_eq!(
-            statement,
-            &Statement::ReturnStatement(Expression::Integer(test))
-        );
+    for (statement, expression) in program.statements.iter().zip(tests) {
+        assert_eq!(statement, &Statement::Return(expression));
     }
 }
 
 #[test]
-fn test_identifier_statements() {
+fn test_identifier_expressions() {
     let input = r"
 foobar;
 ";
@@ -245,12 +258,12 @@ foobar;
 
     assert_eq!(
         program.statements[0],
-        Statement::ExpressionStatement(Expression::Identifier("foobar".to_string()))
+        Statement::Expression(Expression::Identifier("foobar".to_string()))
     );
 }
 
 #[test]
-fn test_integer_statements() {
+fn test_integer_expressions() {
     let input = r"
 5;
 ";
@@ -268,6 +281,35 @@ fn test_integer_statements() {
 
     assert_eq!(
         program.statements[0],
-        Statement::ExpressionStatement(Expression::Integer(5))
+        Statement::Expression(Expression::Integer(5))
     );
+}
+
+#[test]
+fn test_prefix_expressions() {
+    let input = r"
+!5;
+-15;
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 2);
+
+    let tests = [
+        (Token::Bang, Box::new(Expression::Integer(5))),
+        (Token::Minus, Box::new(Expression::Integer(15))),
+    ];
+
+    for (statement, (operator, right)) in program.statements.iter().zip(tests) {
+        let expression = Expression::Prefix { operator, right };
+        assert_eq!(statement, &Statement::Expression(expression));
+    }
 }
