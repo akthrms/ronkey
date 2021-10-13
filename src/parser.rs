@@ -5,6 +5,7 @@ use crate::token::Token;
 type ParseError = String;
 
 /// 優先順位
+#[derive(Debug, PartialEq, PartialOrd)]
 enum Precedence {
     Lowest,
     /// ==
@@ -19,6 +20,18 @@ enum Precedence {
     Prefix,
     /// myFunction(x)
     Call,
+}
+
+impl From<Token> for Precedence {
+    fn from(token: Token) -> Self {
+        match token {
+            Token::Eq | Token::Ne => Self::Equals,
+            Token::Lt | Token::Gt => Self::LessGreater,
+            Token::Plus | Token::Minus => Self::Sum,
+            Token::Slash | Token::Asterisk => Self::Product,
+            _ => Self::Lowest,
+        }
+    }
 }
 
 struct Parser<'a> {
@@ -76,7 +89,7 @@ impl<'a> Parser<'a> {
         self.expect_peek(&Token::Assign)?;
         self.next_token();
 
-        let value = self.parse_expression(&Precedence::Lowest)?;
+        let value = self.parse_expression(Precedence::Lowest)?;
         let statement = Statement::Let { name, value };
 
         while self.is_peek_token(&Token::Semicolon) {
@@ -89,7 +102,7 @@ impl<'a> Parser<'a> {
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
         self.next_token();
 
-        let expression = self.parse_expression(&Precedence::Lowest)?;
+        let expression = self.parse_expression(Precedence::Lowest)?;
         let statement = Statement::Return(expression);
 
         while self.is_peek_token(&Token::Semicolon) {
@@ -100,7 +113,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParseError> {
-        let expression = self.parse_expression(&Precedence::Lowest)?;
+        let expression = self.parse_expression(Precedence::Lowest)?;
         let statement = Statement::Expression(expression);
 
         while self.is_peek_token(&Token::Semicolon) {
@@ -110,16 +123,27 @@ impl<'a> Parser<'a> {
         Ok(statement)
     }
 
-    fn parse_expression(&mut self, precedence: &Precedence) -> Result<Expression, ParseError> {
-        match &self.current_token {
-            Token::Ident(value) => Ok(Expression::Identifier(value.clone())),
-            Token::Int(value) => Ok(Expression::Integer(value.clone())),
-            Token::Bang | Token::Minus => self.parse_prefix_expression(),
-            _ => Err(format!(
-                "no prefix parse function for {} found",
-                self.current_token
-            )),
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
+        let mut expression = match &self.current_token {
+            Token::Ident(value) => Expression::Identifier(value.clone()),
+            Token::Int(value) => Expression::Integer(value.clone()),
+            Token::Bang | Token::Minus => self.parse_prefix_expression()?,
+            _ => {
+                return Err(format!(
+                    "no prefix parse function for {} found",
+                    self.current_token
+                ))
+            }
+        };
+
+        while !self.is_peek_token(&Token::Semicolon)
+            && precedence < Precedence::from(self.peek_token.clone())
+        {
+            self.next_token();
+            expression = self.parse_infix_expression(expression)?;
         }
+
+        Ok(expression)
     }
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, ParseError> {
@@ -127,10 +151,27 @@ impl<'a> Parser<'a> {
 
         self.next_token();
 
-        let right = Box::new(self.parse_expression(&Precedence::Prefix)?);
-        let expression = Expression::Prefix { operator, right };
+        let right = self.parse_expression(Precedence::Prefix)?;
+        let expression = Expression::Prefix {
+            operator,
+            right: Box::new(right),
+        };
+
+        Ok(expression)
+    }
+
+    fn parse_infix_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
+        let operator = self.current_token.clone();
+        let precedence = Precedence::from(self.current_token.clone());
 
         self.next_token();
+
+        let right = self.parse_expression(precedence)?;
+        let expression = Expression::Infix {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        };
 
         Ok(expression)
     }
@@ -310,6 +351,83 @@ fn test_prefix_expressions() {
 
     for (statement, (operator, right)) in program.statements.iter().zip(tests) {
         let expression = Expression::Prefix { operator, right };
+        assert_eq!(statement, &Statement::Expression(expression));
+    }
+}
+
+#[test]
+fn test_infix_expressions() {
+    let input = r"
+5 + 5;
+5 - 5;
+5 * 5;
+5 / 5;
+5 > 5;
+5 < 5;
+5 == 5;
+5 != 5;
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 8);
+
+    let tests = [
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Plus,
+            Box::new(Expression::Integer(5)),
+        ),
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Minus,
+            Box::new(Expression::Integer(5)),
+        ),
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Asterisk,
+            Box::new(Expression::Integer(5)),
+        ),
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Slash,
+            Box::new(Expression::Integer(5)),
+        ),
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Gt,
+            Box::new(Expression::Integer(5)),
+        ),
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Lt,
+            Box::new(Expression::Integer(5)),
+        ),
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Eq,
+            Box::new(Expression::Integer(5)),
+        ),
+        (
+            Box::new(Expression::Integer(5)),
+            Token::Ne,
+            Box::new(Expression::Integer(5)),
+        ),
+    ];
+
+    for (statement, (left, operator, right)) in program.statements.iter().zip(tests) {
+        let expression = Expression::Infix {
+            left,
+            operator,
+            right,
+        };
         assert_eq!(statement, &Statement::Expression(expression));
     }
 }

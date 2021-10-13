@@ -34,6 +34,12 @@ pub enum Expression {
         operator: Token,
         right: Box<Expression>,
     },
+    /// 中置演算子
+    Infix {
+        left: Box<Expression>,
+        operator: Token,
+        right: Box<Expression>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -42,6 +48,11 @@ impl fmt::Display for Expression {
             Expression::Identifier(value) => write!(f, "{}", value),
             Expression::Integer(value) => write!(f, "{}", value),
             Expression::Prefix { operator, right } => write!(f, "({}{})", operator, right),
+            Expression::Infix {
+                left,
+                operator,
+                right,
+            } => write!(f, "({} {} {})", left, operator, right),
         }
     }
 }
