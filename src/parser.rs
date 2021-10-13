@@ -431,3 +431,52 @@ fn test_infix_expressions() {
         assert_eq!(statement, &Statement::Expression(expression));
     }
 }
+
+#[test]
+fn test_operator_precedence_parsing() {
+    let input = r"
+-a * b;
+!-a;
+a + b + c;
+a + b - c;
+a * b * c;
+a * b / c;
+a + b / c;
+a + b * c + d / e - f;
+3 + 4; -5 * 5;
+5 > 4 == 3 < 4;
+5 < 4 != 3 > 4;
+3 + 4 * 5 == 3 * 1 + 4 * 5
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 13);
+
+    let tests = [
+        "((-a) * b)",
+        "(!(-a))",
+        "((a + b) + c)",
+        "((a + b) - c)",
+        "((a * b) * c)",
+        "((a * b) / c)",
+        "(a + (b / c))",
+        "(((a + (b * c)) + (d / e)) - f)",
+        "(3 + 4)",
+        "((-5) * 5)",
+        "((5 > 4) == (3 < 4))",
+        "((5 < 4) != (3 > 4))",
+        "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+    ];
+
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(statement.to_string(), test.to_string());
+    }
+}
