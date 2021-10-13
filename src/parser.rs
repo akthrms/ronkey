@@ -184,14 +184,16 @@ let foobar = 838383;
     assert_eq!(parser.errors.len(), 0);
     assert_eq!(program.statements.len(), 3);
 
-    let tests = ["x", "y", "foobar"];
+    let tests = [("x", 5), ("y", 10), ("foobar", 838383)];
 
-    for (statement, test) in program.statements.iter().zip(tests.iter()) {
-        if let Statement::LetStatement { name, .. } = statement {
-            assert_eq!(name, test);
-        } else {
-            panic!();
-        }
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(
+            statement,
+            &Statement::LetStatement {
+                name: test.0.to_string(),
+                value: Expression::Integer(test.1)
+            }
+        );
     }
 }
 
@@ -214,12 +216,13 @@ return 993322;
     assert_eq!(parser.errors.len(), 0);
     assert_eq!(program.statements.len(), 3);
 
-    for statement in program.statements.iter() {
-        if let Statement::ReturnStatement(_) = statement {
-            assert!(true);
-        } else {
-            panic!();
-        }
+    let tests = [5, 10, 993322];
+
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(
+            statement,
+            &Statement::ReturnStatement(Expression::Integer(test))
+        );
     }
 }
 
