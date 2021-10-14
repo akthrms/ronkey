@@ -342,6 +342,8 @@ fn test_prefix_expressions() {
     let input = r"
 !5;
 -15;
+!true;
+!false;
 ";
 
     let mut lexer = Lexer::new(input);
@@ -353,7 +355,7 @@ fn test_prefix_expressions() {
     }
 
     assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 2);
+    assert_eq!(program.statements.len(), 4);
 
     let tests = [
         Statement::Expression(Expression::Prefix {
@@ -363,6 +365,14 @@ fn test_prefix_expressions() {
         Statement::Expression(Expression::Prefix {
             operator: Token::Minus,
             right: Box::new(Expression::Integer(15)),
+        }),
+        Statement::Expression(Expression::Prefix {
+            operator: Token::Bang,
+            right: Box::new(Expression::Boolean(true)),
+        }),
+        Statement::Expression(Expression::Prefix {
+            operator: Token::Bang,
+            right: Box::new(Expression::Boolean(false)),
         }),
     ];
 
@@ -382,6 +392,9 @@ fn test_infix_expressions() {
 5 < 5;
 5 == 5;
 5 != 5;
+true == true;
+true != false;
+false == false;
 ";
 
     let mut lexer = Lexer::new(input);
@@ -393,7 +406,7 @@ fn test_infix_expressions() {
     }
 
     assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 8);
+    assert_eq!(program.statements.len(), 11);
 
     let tests = [
         Statement::Expression(Expression::Infix {
@@ -436,6 +449,21 @@ fn test_infix_expressions() {
             operator: Token::Ne,
             right: Box::new(Expression::Integer(5)),
         }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Boolean(true)),
+            operator: Token::Eq,
+            right: Box::new(Expression::Boolean(true)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Boolean(true)),
+            operator: Token::Ne,
+            right: Box::new(Expression::Boolean(false)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Boolean(false)),
+            operator: Token::Eq,
+            right: Box::new(Expression::Boolean(false)),
+        }),
     ];
 
     for (statement, test) in program.statements.iter().zip(tests) {
@@ -457,7 +485,11 @@ a + b * c + d / e - f;
 3 + 4; -5 * 5;
 5 > 4 == 3 < 4;
 5 < 4 != 3 > 4;
-3 + 4 * 5 == 3 * 1 + 4 * 5
+3 + 4 * 5 == 3 * 1 + 4 * 5;
+true;
+false;
+3 > 5 == false;
+3 < 5 == true;
 ";
 
     let mut lexer = Lexer::new(input);
@@ -469,7 +501,7 @@ a + b * c + d / e - f;
     }
 
     assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 13);
+    assert_eq!(program.statements.len(), 17);
 
     let tests = [
         "((-a) * b)",
@@ -485,6 +517,10 @@ a + b * c + d / e - f;
         "((5 > 4) == (3 < 4))",
         "((5 < 4) != (3 > 4))",
         "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        "true",
+        "false",
+        "((3 > 5) == false)",
+        "((3 < 5) == true)",
     ];
 
     for (statement, test) in program.statements.iter().zip(tests) {
