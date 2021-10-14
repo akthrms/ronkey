@@ -128,6 +128,8 @@ impl<'a> Parser<'a> {
             Token::Ident(value) => Expression::Identifier(value.clone()),
             Token::Int(value) => Expression::Integer(value.clone()),
             Token::Bang | Token::Minus => self.parse_prefix_expression()?,
+            Token::True => Expression::Boolean(true),
+            Token::False => Expression::Boolean(false),
             _ => {
                 return Err(format!(
                     "no prefix parse function for {} found",
@@ -240,13 +242,22 @@ let foobar = 838383;
     assert_eq!(program.statements.len(), 3);
 
     let tests = [
-        ("x".to_string(), Expression::Integer(5)),
-        ("y".to_string(), Expression::Integer(10)),
-        ("foobar".to_string(), Expression::Integer(838383)),
+        Statement::Let {
+            name: "x".to_string(),
+            value: Expression::Integer(5),
+        },
+        Statement::Let {
+            name: "y".to_string(),
+            value: Expression::Integer(10),
+        },
+        Statement::Let {
+            name: "foobar".to_string(),
+            value: Expression::Integer(838383),
+        },
     ];
 
-    for (statement, (name, value)) in program.statements.iter().zip(tests) {
-        assert_eq!(statement, &Statement::Let { name, value });
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(statement, &test);
     }
 }
 
@@ -270,13 +281,13 @@ return 993322;
     assert_eq!(program.statements.len(), 3);
 
     let tests = [
-        Expression::Integer(5),
-        Expression::Integer(10),
-        Expression::Integer(993322),
+        Statement::Return(Expression::Integer(5)),
+        Statement::Return(Expression::Integer(10)),
+        Statement::Return(Expression::Integer(993322)),
     ];
 
-    for (statement, expression) in program.statements.iter().zip(tests) {
-        assert_eq!(statement, &Statement::Return(expression));
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(statement, &test);
     }
 }
 
@@ -345,13 +356,18 @@ fn test_prefix_expressions() {
     assert_eq!(program.statements.len(), 2);
 
     let tests = [
-        (Token::Bang, Box::new(Expression::Integer(5))),
-        (Token::Minus, Box::new(Expression::Integer(15))),
+        Statement::Expression(Expression::Prefix {
+            operator: Token::Bang,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Prefix {
+            operator: Token::Minus,
+            right: Box::new(Expression::Integer(15)),
+        }),
     ];
 
-    for (statement, (operator, right)) in program.statements.iter().zip(tests) {
-        let expression = Expression::Prefix { operator, right };
-        assert_eq!(statement, &Statement::Expression(expression));
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(statement, &test);
     }
 }
 
@@ -380,55 +396,50 @@ fn test_infix_expressions() {
     assert_eq!(program.statements.len(), 8);
 
     let tests = [
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Plus,
-            Box::new(Expression::Integer(5)),
-        ),
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Minus,
-            Box::new(Expression::Integer(5)),
-        ),
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Asterisk,
-            Box::new(Expression::Integer(5)),
-        ),
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Slash,
-            Box::new(Expression::Integer(5)),
-        ),
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Gt,
-            Box::new(Expression::Integer(5)),
-        ),
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Lt,
-            Box::new(Expression::Integer(5)),
-        ),
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Eq,
-            Box::new(Expression::Integer(5)),
-        ),
-        (
-            Box::new(Expression::Integer(5)),
-            Token::Ne,
-            Box::new(Expression::Integer(5)),
-        ),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Plus,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Minus,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Asterisk,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Slash,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Gt,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Lt,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Eq,
+            right: Box::new(Expression::Integer(5)),
+        }),
+        Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Integer(5)),
+            operator: Token::Ne,
+            right: Box::new(Expression::Integer(5)),
+        }),
     ];
 
-    for (statement, (left, operator, right)) in program.statements.iter().zip(tests) {
-        let expression = Expression::Infix {
-            left,
-            operator,
-            right,
-        };
-        assert_eq!(statement, &Statement::Expression(expression));
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(statement, &test);
     }
 }
 
@@ -478,5 +489,43 @@ a + b * c + d / e - f;
 
     for (statement, test) in program.statements.iter().zip(tests) {
         assert_eq!(statement.to_string(), test.to_string());
+    }
+}
+
+#[test]
+fn test_boolean_expressions() {
+    let input = r"
+true;
+false;
+let foobar = true;
+let barfoo = false;
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 4);
+
+    let tests = [
+        Statement::Expression(Expression::Boolean(true)),
+        Statement::Expression(Expression::Boolean(false)),
+        Statement::Let {
+            name: "foobar".to_string(),
+            value: Expression::Boolean(true),
+        },
+        Statement::Let {
+            name: "barfoo".to_string(),
+            value: Expression::Boolean(false),
+        },
+    ];
+
+    for (statement, test) in program.statements.iter().zip(tests) {
+        assert_eq!(statement, &test);
     }
 }
