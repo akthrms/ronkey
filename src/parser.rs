@@ -130,6 +130,7 @@ impl<'a> Parser<'a> {
             Token::Bang | Token::Minus => self.parse_prefix_expression()?,
             Token::True => Expression::Boolean(true),
             Token::False => Expression::Boolean(false),
+            Token::LParen => self.parse_grouped_expression()?,
             _ => {
                 return Err(format!(
                     "no prefix parse function for {} found",
@@ -174,6 +175,17 @@ impl<'a> Parser<'a> {
             operator,
             right: Box::new(right),
         };
+
+        Ok(expression)
+    }
+
+    fn parse_grouped_expression(&mut self) -> Result<Expression, ParseError> {
+        self.next_token();
+
+        let grouped = self.parse_expression(Precedence::Lowest)?;
+        let expression = Expression::Grouped(Box::new(grouped));
+
+        self.expect_peek(&Token::RParen)?;
 
         Ok(expression)
     }
@@ -490,6 +502,11 @@ true;
 false;
 3 > 5 == false;
 3 < 5 == true;
+1 + (2 + 3) + 4;
+(5 + 5) * 2;
+2 / (5 + 5);
+-(5 + 5);
+!(true == true);
 ";
 
     let mut lexer = Lexer::new(input);
@@ -501,7 +518,7 @@ false;
     }
 
     assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 17);
+    assert_eq!(program.statements.len(), 22);
 
     let tests = [
         "((-a) * b)",
@@ -521,6 +538,11 @@ false;
         "false",
         "((3 > 5) == false)",
         "((3 < 5) == true)",
+        "((1 + (2 + 3)) + 4)",
+        "((5 + 5) * 2)",
+        "(2 / (5 + 5))",
+        "(-(5 + 5))",
+        "(!(true == true))",
     ];
 
     for (statement, test) in program.statements.iter().zip(tests) {

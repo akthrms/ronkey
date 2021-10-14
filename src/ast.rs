@@ -42,6 +42,8 @@ pub enum Expression {
     },
     /// 真偽値
     Boolean(bool),
+    /// グループ化
+    Grouped(Box<Expression>),
 }
 
 impl fmt::Display for Expression {
@@ -56,6 +58,7 @@ impl fmt::Display for Expression {
                 right,
             } => write!(f, "({} {} {})", left, operator, right),
             Expression::Boolean(value) => write!(f, "{}", value),
+            Expression::Grouped(expression) => write!(f, "{}", expression),
         }
     }
 }
