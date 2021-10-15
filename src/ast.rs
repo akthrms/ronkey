@@ -58,6 +58,10 @@ pub enum Expression {
         consequence: Box<Statement>,
         alternative: Option<Box<Statement>>,
     },
+    Function {
+        parameters: Vec<String>,
+        body: Box<Statement>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -78,9 +82,12 @@ impl fmt::Display for Expression {
                 consequence,
                 alternative,
             } => match alternative {
-                Some(a) => write!(f, "if {} {} else {}", condition, consequence, a),
+                Some(a) => write!(f, "if {} {{ {} }} else {{ {} }}", condition, consequence, a),
                 None => write!(f, "if {} {}", condition, consequence),
             },
+            Self::Function { parameters, body } => {
+                write!(f, "fn ({}) {{ {} }}", parameters.join(", "), body)
+            }
         }
     }
 }

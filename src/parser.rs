@@ -147,6 +147,7 @@ impl<'a> Parser<'a> {
             Token::False => Expression::Boolean(false),
             Token::LParen => self.parse_grouped_expression()?,
             Token::If => self.parse_if_expression()?,
+            Token::Function => self.parse_function_expression()?,
             _ => {
                 return Err(format!(
                     "no prefix parse function for {} found",
@@ -232,6 +233,42 @@ impl<'a> Parser<'a> {
         };
 
         Ok(expression)
+    }
+
+    fn parse_function_expression(&mut self) -> Result<Expression, ParseError> {
+        self.expect_peek(&Token::LParen)?;
+
+        let parameters = self.parse_function_parameters()?;
+
+        self.expect_peek(&Token::LBrace)?;
+
+        let body = self.parse_block_statement()?;
+        let expression = Expression::Function {
+            parameters,
+            body: Box::new(body),
+        };
+
+        Ok(expression)
+    }
+
+    fn parse_function_parameters(&mut self) -> Result<Vec<String>, ParseError> {
+        let mut parameters = vec![];
+
+        if self.is_peek_token(&Token::RParen) {
+            self.next_token();
+            return Ok(parameters);
+        }
+
+        parameters.push(self.expect_peek_ident()?);
+
+        while self.is_peek_token(&Token::Comma) {
+            self.next_token();
+            parameters.push(self.expect_peek_ident()?);
+        }
+
+        self.expect_peek(&Token::RParen)?;
+
+        Ok(parameters)
     }
 
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
@@ -705,4 +742,70 @@ if (x < y) { x } else { y }
             alternative: Some(Box::new(alternative))
         })
     )
+}
+
+#[test]
+fn test_function_expressions() {
+    let input = r"
+fn(x, y) { x + y; }
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 1);
+
+    let parameters = vec!["x".to_string(), "y".to_string()];
+    let expression = Expression::Infix {
+        left: Box::new(Expression::Identifier("x".to_string())),
+        operator: Token::Plus,
+        right: Box::new(Expression::Identifier("y".to_string())),
+    };
+    let block = Statement::Block(vec![Statement::Expression(expression)]);
+
+    assert_eq!(
+        program.statements[0],
+        Statement::Expression(Expression::Function {
+            parameters,
+            body: Box::new(block)
+        })
+    );
+}
+
+#[test]
+fn test_function_parameter_parsing() {
+    let input = r"
+fn() {}
+fn(x) {}
+fn(x, y) {}
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 3);
+
+    let tests = [
+        vec![],
+        vec!["x".to_string()],
+        vec!["x".to_string(), "y".to_string()],
+    ];
+
+    for (statement, test) in program.statements.iter().zip(tests.iter()) {
+        if let Statement::Expression(Expression::Function { parameters, .. }) = statement {
+            assert_eq!(parameters, test);
+        }
+    }
 }
