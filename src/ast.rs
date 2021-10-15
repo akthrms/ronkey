@@ -10,6 +10,8 @@ pub enum Statement {
     Return(Expression),
     /// 式
     Expression(Expression),
+    /// ブロック
+    Block(Vec<Statement>),
 }
 
 impl fmt::Display for Statement {
@@ -18,6 +20,12 @@ impl fmt::Display for Statement {
             Self::Let { name, value } => write!(f, "let {} = {};", name, value),
             Self::Return(expression) => write!(f, "return {};", expression),
             Self::Expression(expression) => write!(f, "{}", expression),
+            Self::Block(statements) => {
+                for statement in statements.iter() {
+                    write!(f, "{}", statement)?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -44,21 +52,35 @@ pub enum Expression {
     Boolean(bool),
     /// グループ化
     Grouped(Box<Expression>),
+    /// if 式
+    If {
+        condition: Box<Expression>,
+        consequence: Box<Statement>,
+        alternative: Option<Box<Statement>>,
+    },
 }
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Expression::Identifier(value) => write!(f, "{}", value),
-            Expression::Integer(value) => write!(f, "{}", value),
-            Expression::Prefix { operator, right } => write!(f, "({}{})", operator, right),
-            Expression::Infix {
+            Self::Identifier(value) => write!(f, "{}", value),
+            Self::Integer(value) => write!(f, "{}", value),
+            Self::Prefix { operator, right } => write!(f, "({}{})", operator, right),
+            Self::Infix {
                 left,
                 operator,
                 right,
             } => write!(f, "({} {} {})", left, operator, right),
-            Expression::Boolean(value) => write!(f, "{}", value),
-            Expression::Grouped(expression) => write!(f, "{}", expression),
+            Self::Boolean(value) => write!(f, "{}", value),
+            Self::Grouped(expression) => write!(f, "{}", expression),
+            Self::If {
+                condition,
+                consequence,
+                alternative,
+            } => match alternative {
+                Some(a) => write!(f, "if {} {} else {}", condition, consequence, a),
+                None => write!(f, "if {} {}", condition, consequence),
+            },
         }
     }
 }

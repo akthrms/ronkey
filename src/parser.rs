@@ -123,6 +123,21 @@ impl<'a> Parser<'a> {
         Ok(statement)
     }
 
+    fn parse_block_statement(&mut self) -> Result<Statement, ParseError> {
+        let mut statements = vec![];
+
+        self.next_token();
+
+        while !self.is_current_token(&Token::RBrace) && !self.is_current_token(&Token::Eof) {
+            let statement = self.parse_statement()?;
+            statements.push(statement);
+
+            self.next_token();
+        }
+
+        Ok(Statement::Block(statements))
+    }
+
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
         let mut expression = match &self.current_token {
             Token::Ident(value) => Expression::Identifier(value.clone()),
@@ -131,6 +146,7 @@ impl<'a> Parser<'a> {
             Token::True => Expression::Boolean(true),
             Token::False => Expression::Boolean(false),
             Token::LParen => self.parse_grouped_expression()?,
+            Token::If => self.parse_if_expression()?,
             _ => {
                 return Err(format!(
                     "no prefix parse function for {} found",
@@ -186,6 +202,34 @@ impl<'a> Parser<'a> {
         let expression = Expression::Grouped(Box::new(grouped));
 
         self.expect_peek(&Token::RParen)?;
+
+        Ok(expression)
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expression, ParseError> {
+        self.expect_peek(&Token::LParen)?;
+        self.next_token();
+
+        let condition = self.parse_expression(Precedence::Lowest)?;
+
+        self.expect_peek(&Token::RParen)?;
+        self.expect_peek(&Token::LBrace)?;
+
+        let consequence = self.parse_block_statement()?;
+
+        let expression = Expression::If {
+            condition: Box::new(condition),
+            consequence: Box::new(consequence),
+            alternative: if self.is_peek_token(&Token::Else) {
+                self.next_token();
+                self.expect_peek(&Token::LBrace)?;
+
+                let alternative = self.parse_block_statement()?;
+                Some(Box::new(alternative))
+            } else {
+                None
+            },
+        };
 
         Ok(expression)
     }
@@ -586,4 +630,79 @@ let barfoo = false;
     for (statement, test) in program.statements.iter().zip(tests) {
         assert_eq!(statement, &test);
     }
+}
+
+#[test]
+fn test_if_expressions() {
+    let input = r"
+if (x < y) { x }
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 1);
+
+    let condition = Expression::Infix {
+        left: Box::new(Expression::Identifier("x".to_string())),
+        operator: Token::Lt,
+        right: Box::new(Expression::Identifier("y".to_string())),
+    };
+
+    let statement_x = Statement::Expression(Expression::Identifier("x".to_string()));
+    let consequence = Statement::Block(vec![statement_x]);
+
+    assert_eq!(
+        program.statements[0],
+        Statement::Expression(Expression::If {
+            condition: Box::new(condition),
+            consequence: Box::new(consequence),
+            alternative: None
+        })
+    )
+}
+
+#[test]
+fn test_if_else_expressions() {
+    let input = r"
+if (x < y) { x } else { y }
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 1);
+
+    let condition = Expression::Infix {
+        left: Box::new(Expression::Identifier("x".to_string())),
+        operator: Token::Lt,
+        right: Box::new(Expression::Identifier("y".to_string())),
+    };
+
+    let statement_x = Statement::Expression(Expression::Identifier("x".to_string()));
+    let consequence = Statement::Block(vec![statement_x]);
+
+    let statement_y = Statement::Expression(Expression::Identifier("y".to_string()));
+    let alternative = Statement::Block(vec![statement_y]);
+
+    assert_eq!(
+        program.statements[0],
+        Statement::Expression(Expression::If {
+            condition: Box::new(condition),
+            consequence: Box::new(consequence),
+            alternative: Some(Box::new(alternative))
+        })
+    )
 }
