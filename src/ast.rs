@@ -5,7 +5,7 @@ use std::fmt;
 #[derive(Debug, PartialEq)]
 pub enum Statement {
     /// let
-    Let { name: String, value: Expression },
+    Let { name: Expression, value: Expression },
     /// return
     Return(Expression),
     /// 式
@@ -59,7 +59,7 @@ pub enum Expression {
         alternative: Option<Box<Statement>>,
     },
     Function {
-        parameters: Vec<String>,
+        parameters: Vec<Expression>,
         body: Box<Statement>,
     },
 }
@@ -86,6 +86,13 @@ impl fmt::Display for Expression {
                 None => write!(f, "if {} {}", condition, consequence),
             },
             Self::Function { parameters, body } => {
+                let parameters = parameters
+                    .iter()
+                    .map(|parameter| match parameter {
+                        Self::Identifier(value) => value.clone(),
+                        _ => unreachable!(),
+                    })
+                    .collect::<Vec<_>>();
                 write!(f, "fn ({}) {{ {} }}", parameters.join(", "), body)
             }
         }

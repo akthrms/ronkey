@@ -84,7 +84,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
-        let name = self.expect_peek_ident()?;
+        let name = Expression::Identifier(self.expect_peek_ident()?);
 
         self.expect_peek(&Token::Assign)?;
         self.next_token();
@@ -251,7 +251,7 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    fn parse_function_parameters(&mut self) -> Result<Vec<String>, ParseError> {
+    fn parse_function_parameters(&mut self) -> Result<Vec<Expression>, ParseError> {
         let mut parameters = vec![];
 
         if self.is_peek_token(&Token::RParen) {
@@ -259,11 +259,11 @@ impl<'a> Parser<'a> {
             return Ok(parameters);
         }
 
-        parameters.push(self.expect_peek_ident()?);
+        parameters.push(Expression::Identifier(self.expect_peek_ident()?));
 
         while self.is_peek_token(&Token::Comma) {
             self.next_token();
-            parameters.push(self.expect_peek_ident()?);
+            parameters.push(Expression::Identifier(self.expect_peek_ident()?));
         }
 
         self.expect_peek(&Token::RParen)?;
@@ -336,15 +336,15 @@ let foobar = 838383;
 
     let tests = [
         Statement::Let {
-            name: "x".to_string(),
+            name: Expression::Identifier("x".to_string()),
             value: Expression::Integer(5),
         },
         Statement::Let {
-            name: "y".to_string(),
+            name: Expression::Identifier("y".to_string()),
             value: Expression::Integer(10),
         },
         Statement::Let {
-            name: "foobar".to_string(),
+            name: Expression::Identifier("foobar".to_string()),
             value: Expression::Integer(838383),
         },
     ];
@@ -655,11 +655,11 @@ let barfoo = false;
         Statement::Expression(Expression::Boolean(true)),
         Statement::Expression(Expression::Boolean(false)),
         Statement::Let {
-            name: "foobar".to_string(),
+            name: Expression::Identifier("foobar".to_string()),
             value: Expression::Boolean(true),
         },
         Statement::Let {
-            name: "barfoo".to_string(),
+            name: Expression::Identifier("barfoo".to_string()),
             value: Expression::Boolean(false),
         },
     ];
@@ -761,7 +761,10 @@ fn(x, y) { x + y; }
     assert_eq!(parser.errors.len(), 0);
     assert_eq!(program.statements.len(), 1);
 
-    let parameters = vec!["x".to_string(), "y".to_string()];
+    let parameters = vec![
+        Expression::Identifier("x".to_string()),
+        Expression::Identifier("y".to_string()),
+    ];
     let expression = Expression::Infix {
         left: Box::new(Expression::Identifier("x".to_string())),
         operator: Token::Plus,
@@ -799,8 +802,11 @@ fn(x, y) {}
 
     let tests = [
         vec![],
-        vec!["x".to_string()],
-        vec!["x".to_string(), "y".to_string()],
+        vec![Expression::Identifier("x".to_string())],
+        vec![
+            Expression::Identifier("x".to_string()),
+            Expression::Identifier("y".to_string()),
+        ],
     ];
 
     for (statement, test) in program.statements.iter().zip(tests.iter()) {
