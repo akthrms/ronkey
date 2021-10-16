@@ -58,9 +58,15 @@ pub enum Expression {
         consequence: Box<Statement>,
         alternative: Option<Box<Statement>>,
     },
+    /// 関数
     Function {
         parameters: Vec<Expression>,
         body: Box<Statement>,
+    },
+    /// 呼び出し
+    Call {
+        function: Box<Expression>,
+        arguments: Vec<Expression>,
     },
 }
 
@@ -86,14 +92,15 @@ impl fmt::Display for Expression {
                 None => write!(f, "if {} {}", condition, consequence),
             },
             Self::Function { parameters, body } => {
-                let parameters = parameters
-                    .iter()
-                    .map(|parameter| match parameter {
-                        Self::Identifier(value) => value.clone(),
-                        _ => unreachable!(),
-                    })
-                    .collect::<Vec<_>>();
+                let parameters = parameters.iter().map(Self::to_string).collect::<Vec<_>>();
                 write!(f, "fn ({}) {{ {} }}", parameters.join(", "), body)
+            }
+            Self::Call {
+                function,
+                arguments,
+            } => {
+                let arguments = arguments.iter().map(Self::to_string).collect::<Vec<_>>();
+                write!(f, "{}({})", function, arguments.join(", "))
             }
         }
     }

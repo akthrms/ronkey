@@ -29,6 +29,7 @@ impl From<Token> for Precedence {
             Token::Lt | Token::Gt => Self::LessGreater,
             Token::Plus | Token::Minus => Self::Sum,
             Token::Slash | Token::Asterisk => Self::Product,
+            Token::LParen => Self::Call,
             _ => Self::Lowest,
         }
     }
@@ -159,8 +160,26 @@ impl<'a> Parser<'a> {
         while !self.is_peek_token(&Token::Semicolon)
             && precedence < Precedence::from(self.peek_token.clone())
         {
-            self.next_token();
-            expression = self.parse_infix_expression(expression)?;
+            expression = match &self.peek_token {
+                &Token::LParen => {
+                    self.next_token();
+                    self.parse_call_expression(expression)?
+                }
+                &Token::Assign
+                | &Token::Plus
+                | &Token::Minus
+                | &Token::Asterisk
+                | &Token::Slash
+                | &Token::Bang
+                | &Token::Lt
+                | &Token::Gt
+                | &Token::Eq
+                | &Token::Ne => {
+                    self.next_token();
+                    self.parse_infix_expression(expression)?
+                }
+                _ => expression,
+            };
         }
 
         Ok(expression)
@@ -269,6 +288,40 @@ impl<'a> Parser<'a> {
         self.expect_peek(&Token::RParen)?;
 
         Ok(parameters)
+    }
+
+    fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParseError> {
+        let arguments = self.parse_call_arguments()?;
+        let expression = Expression::Call {
+            function: Box::new(function),
+            arguments,
+        };
+
+        Ok(expression)
+    }
+
+    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
+        let mut arguments = vec![];
+
+        if self.is_peek_token(&Token::RParen) {
+            self.next_token();
+            return Ok(arguments);
+        }
+
+        self.next_token();
+
+        arguments.push(self.parse_expression(Precedence::Lowest)?);
+
+        while self.is_peek_token(&Token::Comma) {
+            self.next_token();
+            self.next_token();
+
+            arguments.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        self.expect_peek(&Token::RParen)?;
+
+        Ok(arguments)
     }
 
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
@@ -588,6 +641,9 @@ false;
 2 / (5 + 5);
 -(5 + 5);
 !(true == true);
+a + add(b * c) + d;
+add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8));
+add(a + b + c * d / f + g);
 ";
 
     let mut lexer = Lexer::new(input);
@@ -599,7 +655,7 @@ false;
     }
 
     assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 22);
+    assert_eq!(program.statements.len(), 25);
 
     let tests = [
         "((-a) * b)",
@@ -624,6 +680,9 @@ false;
         "(2 / (5 + 5))",
         "(-(5 + 5))",
         "(!(true == true))",
+        "((a + add((b * c))) + d)",
+        "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+        "add((((a + b) + ((c * d) / f)) + g))",
     ];
 
     for (statement, test) in program.statements.iter().zip(tests) {
@@ -814,4 +873,41 @@ fn(x, y) {}
             assert_eq!(parameters, test);
         }
     }
+}
+
+#[test]
+fn test_call_expressions() {
+    let input = r"
+add(1, 2 * 3, 4 + 5);
+";
+
+    let mut lexer = Lexer::new(input);
+    let mut parser = Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    for error in parser.errors.iter() {
+        println!("{}", error);
+    }
+
+    assert_eq!(parser.errors.len(), 0);
+    assert_eq!(program.statements.len(), 1);
+
+    let function = Expression::Identifier("add".to_string());
+    let argument_1 = Expression::Integer(1);
+    let argument_2 = Expression::Infix {
+        left: Box::new(Expression::Integer(2)),
+        operator: Token::Asterisk,
+        right: Box::new(Expression::Integer(3)),
+    };
+    let argument_3 = Expression::Infix {
+        left: Box::new(Expression::Integer(4)),
+        operator: Token::Plus,
+        right: Box::new(Expression::Integer(5)),
+    };
+    let call = Expression::Call {
+        function: Box::new(function),
+        arguments: vec![argument_1, argument_2, argument_3],
+    };
+
+    assert_eq!(program.statements[0], Statement::Expression(call));
 }
