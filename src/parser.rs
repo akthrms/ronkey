@@ -35,7 +35,7 @@ impl From<Token> for Precedence {
     }
 }
 
-struct Parser<'a> {
+pub struct Parser<'a> {
     lexer: &'a mut Lexer,
     current_token: Token,
     peek_token: Token,
@@ -43,7 +43,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn new(lexer: &'a mut Lexer) -> Self {
+    pub fn new(lexer: &'a mut Lexer) -> Self {
         let mut parser = Parser {
             lexer,
             current_token: Token::Eof,
@@ -56,12 +56,15 @@ impl<'a> Parser<'a> {
         parser
     }
 
-    fn next_token(&mut self) {
-        self.current_token = self.peek_token.clone();
-        self.peek_token = self.lexer.next_token();
+    pub fn exists_errors(&mut self) -> bool {
+        self.errors.len() > 0
     }
 
-    fn parse_program(&mut self) -> Program {
+    pub fn get_errors(&mut self) -> Vec<String> {
+        self.errors.clone()
+    }
+
+    pub fn parse_program(&mut self) -> Program {
         let mut program = Program::new();
 
         while !self.is_current_token(&Token::Eof) {
@@ -74,6 +77,11 @@ impl<'a> Parser<'a> {
         }
 
         program
+    }
+
+    fn next_token(&mut self) {
+        self.current_token = self.peek_token.clone();
+        self.peek_token = self.lexer.next_token();
     }
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
@@ -165,8 +173,7 @@ impl<'a> Parser<'a> {
                     self.next_token();
                     self.parse_call_expression(expression)?
                 }
-                &Token::Assign
-                | &Token::Plus
+                &Token::Plus
                 | &Token::Minus
                 | &Token::Asterisk
                 | &Token::Slash
