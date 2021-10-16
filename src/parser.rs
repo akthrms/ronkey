@@ -177,7 +177,6 @@ impl<'a> Parser<'a> {
                 | &Token::Minus
                 | &Token::Asterisk
                 | &Token::Slash
-                | &Token::Bang
                 | &Token::Lt
                 | &Token::Gt
                 | &Token::Eq
