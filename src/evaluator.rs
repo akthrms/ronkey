@@ -86,9 +86,11 @@ fn evaluate_prefix_expression(operator: &Token, right: Object) -> EvaluateResult
         Token::Bang => evaluate_bang_prefix(right)?,
         Token::Minus => evaluate_minus_prefix(right)?,
         _ => {
-            return Err(
-                format!("unknown operator: {}{}", operator, String::from(right)).to_string(),
-            )
+            return Err(format!(
+                "unknown operator: {}{}",
+                operator,
+                String::from(right)
+            ))
         }
     };
 
@@ -99,7 +101,7 @@ fn evaluate_bang_prefix(right: Object) -> EvaluateResult {
     let result = match right {
         Object::Boolean(false) => Object::Boolean(true),
         Object::Null => Object::Boolean(true),
-        _ => return Err(format!("unknown operator: !{}", String::from(right)).to_string()),
+        _ => return Err(format!("unknown operator: !{}", String::from(right))),
     };
 
     Ok(result)
@@ -108,7 +110,7 @@ fn evaluate_bang_prefix(right: Object) -> EvaluateResult {
 fn evaluate_minus_prefix(right: Object) -> EvaluateResult {
     let result = match right {
         Object::Integer(value) => Object::Integer(-value),
-        _ => return Err(format!("unknown operator: -{}", String::from(right)).to_string()),
+        _ => return Err(format!("unknown operator: -{}", String::from(right))),
     };
 
     Ok(result)
@@ -128,8 +130,7 @@ fn evaluate_infix_expression(left: Object, operator: &Token, right: Object) -> E
                 String::from(left),
                 operator,
                 String::from(right)
-            )
-            .to_string())
+            ))
         }
     };
 
@@ -146,7 +147,7 @@ fn evaluate_integer_infix(left: isize, operator: &Token, right: isize) -> Evalua
         Token::Gt => Object::Boolean(left > right),
         Token::Eq => Object::Boolean(left == right),
         Token::Ne => Object::Boolean(left != right),
-        _ => return Err(format!("unknown operator: Integer {} Integer", operator).to_string()),
+        _ => return Err(format!("unknown operator: Integer {} Integer", operator)),
     };
 
     Ok(result)
@@ -156,7 +157,7 @@ fn evaluate_boolean_infix(left: bool, operator: &Token, right: bool) -> Evaluate
     let result = match operator {
         Token::Eq => Object::Boolean(left == right),
         Token::Ne => Object::Boolean(left != right),
-        _ => return Err(format!("unknown operator: Boolean {} Boolean", operator).to_string()),
+        _ => return Err(format!("unknown operator: Boolean {} Boolean", operator)),
     };
 
     Ok(result)
@@ -169,6 +170,7 @@ fn evaluate_if_expression(
 ) -> EvaluateResult {
     let condition = evaluate_expression(condition)?;
     let truthy = is_truthy(condition);
+
     let result = match (truthy, alternative) {
         (true, _) => evaluate_statement(consequence)?,
         (_, Some(statement)) => evaluate_statement(statement)?,

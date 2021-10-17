@@ -23,7 +23,7 @@ pub fn start() -> io::Result<()> {
 
         match evaluate(program) {
             Ok(evaluated) => println!("{}", evaluated),
-            Err(message) => println!("{}", message),
+            Err(message) => println!("ERROR: {}", message),
         };
 
         io::stdout().flush()?;
