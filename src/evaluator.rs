@@ -3,9 +3,8 @@ use crate::object::Object;
 use crate::token::Token;
 
 type EvaluateError = String;
-type EvaluateResult = Result<Object, EvaluateError>;
 
-pub fn evaluate(program: Program) -> EvaluateResult {
+pub fn evaluate(program: Program) -> Result<Object, EvaluateError> {
     let mut result = Object::Default;
 
     for statement in program.statements.iter() {
@@ -19,7 +18,7 @@ pub fn evaluate(program: Program) -> EvaluateResult {
     Ok(result)
 }
 
-fn evaluate_statement(statement: &Statement) -> EvaluateResult {
+fn evaluate_statement(statement: &Statement) -> Result<Object, EvaluateError> {
     let result = match statement {
         Statement::Expression(expression) => evaluate_expression(expression)?,
         Statement::Block(statements) => evaluate_block_statement(statements)?,
@@ -30,7 +29,7 @@ fn evaluate_statement(statement: &Statement) -> EvaluateResult {
     Ok(result)
 }
 
-fn evaluate_block_statement(statements: &Vec<Statement>) -> EvaluateResult {
+fn evaluate_block_statement(statements: &Vec<Statement>) -> Result<Object, EvaluateError> {
     let mut result = Object::Default;
 
     for statement in statements {
@@ -44,7 +43,7 @@ fn evaluate_block_statement(statements: &Vec<Statement>) -> EvaluateResult {
     Ok(result)
 }
 
-fn evaluate_return_statement(expression: &Expression) -> EvaluateResult {
+fn evaluate_return_statement(expression: &Expression) -> Result<Object, EvaluateError> {
     let result = evaluate_expression(expression)?;
     let result = Box::new(result);
     let result = Object::Return(result);
@@ -52,7 +51,7 @@ fn evaluate_return_statement(expression: &Expression) -> EvaluateResult {
     Ok(result)
 }
 
-fn evaluate_expression(expression: &Expression) -> EvaluateResult {
+fn evaluate_expression(expression: &Expression) -> Result<Object, EvaluateError> {
     let result = match expression {
         Expression::Integer(value) => Object::Integer(value.clone()),
         Expression::Boolean(value) => Object::Boolean(value.clone()),
@@ -74,17 +73,20 @@ fn evaluate_expression(expression: &Expression) -> EvaluateResult {
             condition,
             consequence,
             alternative,
-        } => evaluate_if_expression(condition, consequence, alternative)?,
+        } => {
+            let condition = evaluate_expression(condition)?;
+            evaluate_if_expression(condition, consequence, alternative)?
+        }
         _ => unimplemented!(),
     };
 
     Ok(result)
 }
 
-fn evaluate_prefix_expression(operator: &Token, right: Object) -> EvaluateResult {
+fn evaluate_prefix_expression(operator: &Token, right: Object) -> Result<Object, EvaluateError> {
     let result = match operator {
-        Token::Bang => evaluate_bang_prefix(right)?,
-        Token::Minus => evaluate_minus_prefix(right)?,
+        Token::Bang => evaluate_bang_prefix_expression(right)?,
+        Token::Minus => evaluate_minus_prefix_expression(right)?,
         _ => {
             return Err(format!(
                 "unknown operator: {}{}",
@@ -97,7 +99,7 @@ fn evaluate_prefix_expression(operator: &Token, right: Object) -> EvaluateResult
     Ok(result)
 }
 
-fn evaluate_bang_prefix(right: Object) -> EvaluateResult {
+fn evaluate_bang_prefix_expression(right: Object) -> Result<Object, EvaluateError> {
     let result = match right {
         Object::Boolean(false) => Object::Boolean(true),
         Object::Null => Object::Boolean(true),
@@ -107,7 +109,7 @@ fn evaluate_bang_prefix(right: Object) -> EvaluateResult {
     Ok(result)
 }
 
-fn evaluate_minus_prefix(right: Object) -> EvaluateResult {
+fn evaluate_minus_prefix_expression(right: Object) -> Result<Object, EvaluateError> {
     let result = match right {
         Object::Integer(value) => Object::Integer(-value),
         _ => return Err(format!("unknown operator: -{}", String::from(right))),
@@ -116,13 +118,17 @@ fn evaluate_minus_prefix(right: Object) -> EvaluateResult {
     Ok(result)
 }
 
-fn evaluate_infix_expression(left: Object, operator: &Token, right: Object) -> EvaluateResult {
+fn evaluate_infix_expression(
+    left: Object,
+    operator: &Token,
+    right: Object,
+) -> Result<Object, EvaluateError> {
     let result = match (&left, &right) {
         (Object::Integer(left), Object::Integer(right)) => {
-            evaluate_integer_infix(*left, operator, *right)?
+            evaluate_integer_infix_expression(*left, operator, *right)?
         }
         (Object::Boolean(left), Object::Boolean(right)) => {
-            evaluate_boolean_infix(*left, operator, *right)?
+            evaluate_boolean_infix_expression(*left, operator, *right)?
         }
         _ => {
             return Err(format!(
@@ -137,7 +143,11 @@ fn evaluate_infix_expression(left: Object, operator: &Token, right: Object) -> E
     Ok(result)
 }
 
-fn evaluate_integer_infix(left: isize, operator: &Token, right: isize) -> EvaluateResult {
+fn evaluate_integer_infix_expression(
+    left: isize,
+    operator: &Token,
+    right: isize,
+) -> Result<Object, EvaluateError> {
     let result = match operator {
         Token::Plus => Object::Integer(left + right),
         Token::Minus => Object::Integer(left - right),
@@ -153,7 +163,11 @@ fn evaluate_integer_infix(left: isize, operator: &Token, right: isize) -> Evalua
     Ok(result)
 }
 
-fn evaluate_boolean_infix(left: bool, operator: &Token, right: bool) -> EvaluateResult {
+fn evaluate_boolean_infix_expression(
+    left: bool,
+    operator: &Token,
+    right: bool,
+) -> Result<Object, EvaluateError> {
     let result = match operator {
         Token::Eq => Object::Boolean(left == right),
         Token::Ne => Object::Boolean(left != right),
@@ -164,11 +178,10 @@ fn evaluate_boolean_infix(left: bool, operator: &Token, right: bool) -> Evaluate
 }
 
 fn evaluate_if_expression(
-    condition: &Expression,
+    condition: Object,
     consequence: &Statement,
     alternative: &Option<Box<Statement>>,
-) -> EvaluateResult {
-    let condition = evaluate_expression(condition)?;
+) -> Result<Object, EvaluateError> {
     let truthy = is_truthy(condition);
 
     let result = match (truthy, alternative) {
@@ -190,12 +203,12 @@ fn is_truthy(object: Object) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::evaluator::{evaluate, EvaluateResult};
+    use crate::evaluator::{evaluate, EvaluateError};
     use crate::lexer::Lexer;
     use crate::object::Object;
     use crate::parser::Parser;
 
-    fn test_evaluate(input: &str) -> EvaluateResult {
+    fn test_evaluate(input: &str) -> Result<Object, EvaluateError> {
         let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program();
