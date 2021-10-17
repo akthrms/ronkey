@@ -1,3 +1,4 @@
+use crate::evaluator::evaluate;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use std::io;
@@ -20,10 +21,9 @@ pub fn start() -> io::Result<()> {
             continue;
         }
 
-        for statement in program.statements.iter() {
-            println!("{:?}", statement);
-            io::stdout().flush()?;
-        }
+        let evaluated = evaluate(program);
+        println!("{}", evaluated);
+        io::stdout().flush()?;
     }
 }
 
