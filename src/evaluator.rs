@@ -2,82 +2,142 @@ use crate::ast::{Expression, Program, Statement};
 use crate::object::Object;
 use crate::token::Token;
 
-pub fn evaluate(program: Program) -> Object {
+type EvaluateError = String;
+type EvaluateResult = Result<Object, EvaluateError>;
+
+pub fn evaluate(program: Program) -> EvaluateResult {
     let mut result = Object::Default;
 
     for statement in program.statements.iter() {
-        result = evaluate_statement(statement)
+        result = evaluate_statement(statement)?;
+
+        if let Object::Return(result) = result {
+            return Ok(*result);
+        }
     }
 
-    result
+    Ok(result)
 }
 
-fn evaluate_statement(statement: &Statement) -> Object {
-    match statement {
-        Statement::Expression(expression) => evaluate_expression(expression),
+fn evaluate_statement(statement: &Statement) -> EvaluateResult {
+    let result = match statement {
+        Statement::Expression(expression) => evaluate_expression(expression)?,
+        Statement::Block(statements) => evaluate_block_statement(statements)?,
+        Statement::Return(expression) => evaluate_return_statement(expression)?,
         _ => unimplemented!(),
-    }
+    };
+
+    Ok(result)
 }
 
-fn evaluate_expression(expression: &Expression) -> Object {
-    match expression {
+fn evaluate_block_statement(statements: &Vec<Statement>) -> EvaluateResult {
+    let mut result = Object::Default;
+
+    for statement in statements {
+        result = evaluate_statement(statement)?;
+
+        if let Object::Return(_) = result {
+            break;
+        }
+    }
+
+    Ok(result)
+}
+
+fn evaluate_return_statement(expression: &Expression) -> EvaluateResult {
+    let result = evaluate_expression(expression)?;
+    let result = Box::new(result);
+    let result = Object::Return(result);
+
+    Ok(result)
+}
+
+fn evaluate_expression(expression: &Expression) -> EvaluateResult {
+    let result = match expression {
         Expression::Integer(value) => Object::Integer(value.clone()),
         Expression::Boolean(value) => Object::Boolean(value.clone()),
         Expression::Prefix { operator, right } => {
-            let right = evaluate_expression(right);
-            evaluate_prefix_expression(operator, right)
+            let right = evaluate_expression(right)?;
+            evaluate_prefix_expression(operator, right)?
         }
         Expression::Infix {
             left,
             operator,
             right,
         } => {
-            let left = evaluate_expression(left);
-            let right = evaluate_expression(right);
-            evaluate_infix_expression(left, operator, right)
+            let left = evaluate_expression(left)?;
+            let right = evaluate_expression(right)?;
+            evaluate_infix_expression(left, operator, right)?
         }
-        Expression::Grouped(expression) => evaluate_expression(expression),
+        Expression::Grouped(expression) => evaluate_expression(expression)?,
+        Expression::If {
+            condition,
+            consequence,
+            alternative,
+        } => evaluate_if_expression(condition, consequence, alternative)?,
         _ => unimplemented!(),
-    }
+    };
+
+    Ok(result)
 }
 
-fn evaluate_prefix_expression(operator: &Token, right: Object) -> Object {
-    match operator {
-        Token::Bang => evaluate_bang_prefix_expression(right),
-        Token::Minus => evaluate_minus_prefix_expression(right),
-        _ => unimplemented!(),
-    }
+fn evaluate_prefix_expression(operator: &Token, right: Object) -> EvaluateResult {
+    let result = match operator {
+        Token::Bang => evaluate_bang_prefix(right)?,
+        Token::Minus => evaluate_minus_prefix(right)?,
+        _ => {
+            return Err(
+                format!("unknown operator: {}{}", operator, String::from(right)).to_string(),
+            )
+        }
+    };
+
+    Ok(result)
 }
 
-fn evaluate_bang_prefix_expression(right: Object) -> Object {
-    match right {
+fn evaluate_bang_prefix(right: Object) -> EvaluateResult {
+    let result = match right {
         Object::Boolean(false) => Object::Boolean(true),
         Object::Null => Object::Boolean(true),
-        _ => Object::Boolean(false),
-    }
+        _ => return Err(format!("unknown operator: !{}", String::from(right)).to_string()),
+    };
+
+    Ok(result)
 }
 
-fn evaluate_minus_prefix_expression(right: Object) -> Object {
-    match right {
+fn evaluate_minus_prefix(right: Object) -> EvaluateResult {
+    let result = match right {
         Object::Integer(value) => Object::Integer(-value),
-        _ => unimplemented!(),
-    }
+        _ => return Err(format!("unknown operator: -{}", String::from(right)).to_string()),
+    };
+
+    Ok(result)
 }
 
-fn evaluate_infix_expression(left: Object, operator: &Token, right: Object) -> Object {
-    match (left, right) {
+fn evaluate_infix_expression(left: Object, operator: &Token, right: Object) -> EvaluateResult {
+    let result = match (&left, &right) {
         (Object::Integer(left), Object::Integer(right)) => {
-            evaluate_integer_infix_expression(left, operator, right)
+            evaluate_integer_infix(*left, operator, *right)?
         }
         (Object::Boolean(left), Object::Boolean(right)) => {
-            evaluate_boolean_infix_expression(left, operator, right)
+            evaluate_boolean_infix(*left, operator, *right)?
         }
-        _ => unimplemented!(),
-    }
+        _ => {
+            return Err(format!(
+                "type mismatch: {} {} {}",
+                String::from(left),
+                operator,
+                String::from(right)
+            )
+            .to_string())
+        }
+    };
+
+    Ok(result)
 }
 
-fn evaluate_integer_infix_expression(left: isize, operator: &Token, right: isize) -> Object {
-    match operator {
+fn evaluate_integer_infix(left: isize, operator: &Token, right: isize) -> EvaluateResult {
+    let result = match operator {
         Token::Plus => Object::Integer(left + right),
         Token::Minus => Object::Integer(left - right),
         Token::Asterisk => Object::Integer(left * right),
@@ -86,26 +146,54 @@ fn evaluate_integer_infix_expression(left: isize, operator: &Token, right: isize
         Token::Gt => Object::Boolean(left > right),
         Token::Eq => Object::Boolean(left == right),
         Token::Ne => Object::Boolean(left != right),
-        _ => unimplemented!(),
-    }
+        _ => return Err(format!("unknown operator: Integer {} Integer", operator).to_string()),
+    };
+
+    Ok(result)
 }
 
-fn evaluate_boolean_infix_expression(left: bool, operator: &Token, right: bool) -> Object {
-    match operator {
+fn evaluate_boolean_infix(left: bool, operator: &Token, right: bool) -> EvaluateResult {
+    let result = match operator {
         Token::Eq => Object::Boolean(left == right),
         Token::Ne => Object::Boolean(left != right),
-        _ => unimplemented!(),
+        _ => return Err(format!("unknown operator: Boolean {} Boolean", operator).to_string()),
+    };
+
+    Ok(result)
+}
+
+fn evaluate_if_expression(
+    condition: &Expression,
+    consequence: &Statement,
+    alternative: &Option<Box<Statement>>,
+) -> EvaluateResult {
+    let condition = evaluate_expression(condition)?;
+    let truthy = is_truthy(condition);
+    let result = match (truthy, alternative) {
+        (true, _) => evaluate_statement(consequence)?,
+        (_, Some(statement)) => evaluate_statement(statement)?,
+        (_, _) => Object::Null,
+    };
+
+    Ok(result)
+}
+
+fn is_truthy(object: Object) -> bool {
+    match object {
+        Object::Boolean(false) => false,
+        Object::Null => false,
+        _ => true,
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::evaluator::evaluate;
+    use crate::evaluator::{evaluate, EvaluateResult};
     use crate::lexer::Lexer;
     use crate::object::Object;
     use crate::parser::Parser;
 
-    fn test_evaluate(input: &str) -> Object {
+    fn test_evaluate(input: &str) -> EvaluateResult {
         let mut lexer = Lexer::new(input);
         let mut parser = Parser::new(&mut lexer);
         let program = parser.parse_program();
@@ -133,8 +221,9 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let result = test_evaluate(input);
-            assert_eq!(result, expected);
+            if let Ok(result) = test_evaluate(input) {
+                assert_eq!(result, expected);
+            }
         }
     }
 
@@ -163,8 +252,9 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let result = test_evaluate(input);
-            assert_eq!(result, expected);
+            if let Ok(result) = test_evaluate(input) {
+                assert_eq!(result, expected);
+            }
         }
     }
 
@@ -180,8 +270,73 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            let result = test_evaluate(input);
-            assert_eq!(result, expected);
+            if let Ok(result) = test_evaluate(input) {
+                assert_eq!(result, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_if_else_expressions() {
+        let tests = [
+            ("if (true) { 10 }", Object::Integer(10)),
+            ("if (false) { 10 }", Object::Null),
+            ("if (1) { 10 }", Object::Integer(10)),
+            ("if (1 < 2) { 10 }", Object::Integer(10)),
+            ("if (1 > 2) { 10 }", Object::Null),
+            ("if (1 > 2) { 10 } else { 20 }", Object::Integer(20)),
+            ("if (1 < 2) { 10 } else { 20 }", Object::Integer(10)),
+        ];
+
+        for (input, expected) in tests {
+            if let Ok(result) = test_evaluate(input) {
+                assert_eq!(result, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_return_statements() {
+        let tests = [
+            ("return 10;", Object::Integer(10)),
+            ("return 10; 9;", Object::Integer(10)),
+            ("return 2 * 5; 9;", Object::Integer(10)),
+            ("9; return 2 * 5; 9;", Object::Integer(10)),
+            (
+                "if (10 > 1) { if (10 > 1) { return 10; } return 1; }",
+                Object::Integer(10),
+            ),
+        ];
+
+        for (input, expected) in tests {
+            if let Ok(result) = test_evaluate(input) {
+                assert_eq!(result, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let tests = [
+            ("5 + true;", "type mismatch: Integer + Boolean"),
+            ("5 + true; 5;", "type mismatch: Integer + Boolean"),
+            ("-true;", "unknown operator: -Boolean"),
+            ("true + false;", "unknown operator: Boolean + Boolean"),
+            ("5; true + false; 5;", "unknown operator: Boolean + Boolean"),
+            (
+                "if (10 > 1) { true + false; }",
+                "unknown operator: Boolean + Boolean",
+            ),
+            (
+                "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
+                "unknown operator: Boolean + Boolean",
+            ),
+        ];
+
+        for (input, expected) in tests {
+            if let Err(message) = test_evaluate(input) {
+                assert_eq!(message, expected);
+            }
         }
     }
 }

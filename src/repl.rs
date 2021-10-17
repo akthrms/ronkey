@@ -21,8 +21,11 @@ pub fn start() -> io::Result<()> {
             continue;
         }
 
-        let evaluated = evaluate(program);
-        println!("{}", evaluated);
+        match evaluate(program) {
+            Ok(evaluated) => println!("{}", evaluated),
+            Err(message) => println!("{}", message),
+        };
+
         io::stdout().flush()?;
     }
 }
