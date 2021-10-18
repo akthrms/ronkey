@@ -131,10 +131,14 @@ fn evaluate_infix_expression(
 ) -> Result<Object, EvaluateError> {
     let result = match (&left, &right) {
         (Object::Integer(left), Object::Integer(right)) => {
-            evaluate_integer_infix_expression(*left, operator, *right)?
+            let left = *left;
+            let right = *right;
+            evaluate_integer_infix_expression(left, operator, right)?
         }
         (Object::Boolean(left), Object::Boolean(right)) => {
-            evaluate_boolean_infix_expression(*left, operator, *right)?
+            let left = *left;
+            let right = *right;
+            evaluate_boolean_infix_expression(left, operator, right)?
         }
         _ => {
             let left = left.get_type();
@@ -193,7 +197,6 @@ fn evaluate_if_expression(
     alternative: &Option<Box<Statement>>,
 ) -> Result<Object, EvaluateError> {
     let truthy = is_truthy(condition);
-
     let result = match (truthy, alternative) {
         (true, _) => evaluate_statement(consequence)?,
         (_, Some(statement)) => evaluate_statement(statement)?,

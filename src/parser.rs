@@ -374,546 +374,554 @@ impl<'a> Parser<'a> {
     }
 }
 
-#[test]
-fn test_let_statements() {
-    let input = r"
-let x = 5;
-let y = 10;
-let foobar = 838383;
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 3);
-
-    let tests = [
-        Statement::Let {
-            name: Expression::Identifier("x".to_string()),
-            value: Expression::Integer(5),
-        },
-        Statement::Let {
-            name: Expression::Identifier("y".to_string()),
-            value: Expression::Integer(10),
-        },
-        Statement::Let {
-            name: Expression::Identifier("foobar".to_string()),
-            value: Expression::Integer(838383),
-        },
-    ];
-
-    for (statement, test) in program.statements.iter().zip(tests) {
-        assert_eq!(statement, &test);
-    }
-}
-
-#[test]
-fn test_return_statements() {
-    let input = r"
-return 5;
-return 10;
-return 993322;
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 3);
-
-    let tests = [
-        Statement::Return(Expression::Integer(5)),
-        Statement::Return(Expression::Integer(10)),
-        Statement::Return(Expression::Integer(993322)),
-    ];
-
-    for (statement, test) in program.statements.iter().zip(tests) {
-        assert_eq!(statement, &test);
-    }
-}
-
-#[test]
-fn test_identifier_expressions() {
-    let input = r"
-foobar;
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 1);
-
-    assert_eq!(
-        program.statements[0],
-        Statement::Expression(Expression::Identifier("foobar".to_string()))
-    );
-}
-
-#[test]
-fn test_integer_expressions() {
-    let input = r"
-5;
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 1);
-
-    assert_eq!(
-        program.statements[0],
-        Statement::Expression(Expression::Integer(5))
-    );
-}
-
-#[test]
-fn test_prefix_expressions() {
-    let input = r"
-!5;
--15;
-!true;
-!false;
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 4);
-
-    let tests = [
-        Statement::Expression(Expression::Prefix {
-            operator: Token::Bang,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Prefix {
-            operator: Token::Minus,
-            right: Box::new(Expression::Integer(15)),
-        }),
-        Statement::Expression(Expression::Prefix {
-            operator: Token::Bang,
-            right: Box::new(Expression::Boolean(true)),
-        }),
-        Statement::Expression(Expression::Prefix {
-            operator: Token::Bang,
-            right: Box::new(Expression::Boolean(false)),
-        }),
-    ];
-
-    for (statement, test) in program.statements.iter().zip(tests) {
-        assert_eq!(statement, &test);
-    }
-}
-
-#[test]
-fn test_infix_expressions() {
-    let input = r"
-5 + 5;
-5 - 5;
-5 * 5;
-5 / 5;
-5 > 5;
-5 < 5;
-5 == 5;
-5 != 5;
-true == true;
-true != false;
-false == false;
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 11);
-
-    let tests = [
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Plus,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Minus,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Asterisk,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Slash,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Gt,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Lt,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Eq,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Integer(5)),
-            operator: Token::Ne,
-            right: Box::new(Expression::Integer(5)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Boolean(true)),
-            operator: Token::Eq,
-            right: Box::new(Expression::Boolean(true)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Boolean(true)),
-            operator: Token::Ne,
-            right: Box::new(Expression::Boolean(false)),
-        }),
-        Statement::Expression(Expression::Infix {
-            left: Box::new(Expression::Boolean(false)),
-            operator: Token::Eq,
-            right: Box::new(Expression::Boolean(false)),
-        }),
-    ];
-
-    for (statement, test) in program.statements.iter().zip(tests) {
-        assert_eq!(statement, &test);
-    }
-}
-
-#[test]
-fn test_operator_precedence_parsing() {
-    let input = r"
--a * b;
-!-a;
-a + b + c;
-a + b - c;
-a * b * c;
-a * b / c;
-a + b / c;
-a + b * c + d / e - f;
-3 + 4; -5 * 5;
-5 > 4 == 3 < 4;
-5 < 4 != 3 > 4;
-3 + 4 * 5 == 3 * 1 + 4 * 5;
-true;
-false;
-3 > 5 == false;
-3 < 5 == true;
-1 + (2 + 3) + 4;
-(5 + 5) * 2;
-2 / (5 + 5);
--(5 + 5);
-!(true == true);
-a + add(b * c) + d;
-add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8));
-add(a + b + c * d / f + g);
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 25);
-
-    let tests = [
-        "((-a) * b)",
-        "(!(-a))",
-        "((a + b) + c)",
-        "((a + b) - c)",
-        "((a * b) * c)",
-        "((a * b) / c)",
-        "(a + (b / c))",
-        "(((a + (b * c)) + (d / e)) - f)",
-        "(3 + 4)",
-        "((-5) * 5)",
-        "((5 > 4) == (3 < 4))",
-        "((5 < 4) != (3 > 4))",
-        "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
-        "true",
-        "false",
-        "((3 > 5) == false)",
-        "((3 < 5) == true)",
-        "((1 + (2 + 3)) + 4)",
-        "((5 + 5) * 2)",
-        "(2 / (5 + 5))",
-        "(-(5 + 5))",
-        "(!(true == true))",
-        "((a + add((b * c))) + d)",
-        "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
-        "add((((a + b) + ((c * d) / f)) + g))",
-    ];
-
-    for (statement, test) in program.statements.iter().zip(tests) {
-        assert_eq!(statement.to_string(), test.to_string());
-    }
-}
-
-#[test]
-fn test_boolean_expressions() {
-    let input = r"
-true;
-false;
-let foobar = true;
-let barfoo = false;
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 4);
-
-    let tests = [
-        Statement::Expression(Expression::Boolean(true)),
-        Statement::Expression(Expression::Boolean(false)),
-        Statement::Let {
-            name: Expression::Identifier("foobar".to_string()),
-            value: Expression::Boolean(true),
-        },
-        Statement::Let {
-            name: Expression::Identifier("barfoo".to_string()),
-            value: Expression::Boolean(false),
-        },
-    ];
-
-    for (statement, test) in program.statements.iter().zip(tests) {
-        assert_eq!(statement, &test);
-    }
-}
-
-#[test]
-fn test_if_expressions() {
-    let input = r"
-if (x < y) { x }
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 1);
-
-    let condition = Expression::Infix {
-        left: Box::new(Expression::Identifier("x".to_string())),
-        operator: Token::Lt,
-        right: Box::new(Expression::Identifier("y".to_string())),
-    };
-
-    let statement_x = Statement::Expression(Expression::Identifier("x".to_string()));
-    let consequence = Statement::Block(vec![statement_x]);
-
-    assert_eq!(
-        program.statements[0],
-        Statement::Expression(Expression::If {
-            condition: Box::new(condition),
-            consequence: Box::new(consequence),
-            alternative: None
-        })
-    )
-}
-
-#[test]
-fn test_if_else_expressions() {
-    let input = r"
-if (x < y) { x } else { y }
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 1);
-
-    let condition = Expression::Infix {
-        left: Box::new(Expression::Identifier("x".to_string())),
-        operator: Token::Lt,
-        right: Box::new(Expression::Identifier("y".to_string())),
-    };
-
-    let statement_x = Statement::Expression(Expression::Identifier("x".to_string()));
-    let consequence = Statement::Block(vec![statement_x]);
-
-    let statement_y = Statement::Expression(Expression::Identifier("y".to_string()));
-    let alternative = Statement::Block(vec![statement_y]);
-
-    assert_eq!(
-        program.statements[0],
-        Statement::Expression(Expression::If {
-            condition: Box::new(condition),
-            consequence: Box::new(consequence),
-            alternative: Some(Box::new(alternative))
-        })
-    )
-}
-
-#[test]
-fn test_function_expressions() {
-    let input = r"
-fn(x, y) { x + y; }
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 1);
-
-    let parameters = vec![
-        Expression::Identifier("x".to_string()),
-        Expression::Identifier("y".to_string()),
-    ];
-    let expression = Expression::Infix {
-        left: Box::new(Expression::Identifier("x".to_string())),
-        operator: Token::Plus,
-        right: Box::new(Expression::Identifier("y".to_string())),
-    };
-    let block = Statement::Block(vec![Statement::Expression(expression)]);
-
-    assert_eq!(
-        program.statements[0],
-        Statement::Expression(Expression::Function {
-            parameters,
-            body: Box::new(block)
-        })
-    );
-}
-
-#[test]
-fn test_function_parameter_parsing() {
-    let input = r"
-fn() {}
-fn(x) {}
-fn(x, y) {}
-";
-
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
-
-    for error in parser.errors.iter() {
-        println!("{}", error);
-    }
-
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 3);
-
-    let tests = [
-        vec![],
-        vec![Expression::Identifier("x".to_string())],
-        vec![
-            Expression::Identifier("x".to_string()),
-            Expression::Identifier("y".to_string()),
-        ],
-    ];
-
-    for (statement, test) in program.statements.iter().zip(tests.iter()) {
-        if let Statement::Expression(Expression::Function { parameters, .. }) = statement {
-            assert_eq!(parameters, test);
+#[cfg(test)]
+mod tests {
+    use crate::ast::{Expression, Statement};
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    use crate::token::Token;
+
+    #[test]
+    fn test_let_statements() {
+        let input = r"
+    let x = 5;
+    let y = 10;
+    let foobar = 838383;
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 3);
+
+        let tests = [
+            Statement::Let {
+                name: Expression::Identifier("x".to_string()),
+                value: Expression::Integer(5),
+            },
+            Statement::Let {
+                name: Expression::Identifier("y".to_string()),
+                value: Expression::Integer(10),
+            },
+            Statement::Let {
+                name: Expression::Identifier("foobar".to_string()),
+                value: Expression::Integer(838383),
+            },
+        ];
+
+        for (statement, test) in program.statements.iter().zip(tests) {
+            assert_eq!(statement, &test);
         }
     }
-}
 
-#[test]
-fn test_call_expressions() {
-    let input = r"
-add(1, 2 * 3, 4 + 5);
-";
+    #[test]
+    fn test_return_statements() {
+        let input = r"
+    return 5;
+    return 10;
+    return 993322;
+    ";
 
-    let mut lexer = Lexer::new(input);
-    let mut parser = Parser::new(&mut lexer);
-    let program = parser.parse_program();
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
 
-    for error in parser.errors.iter() {
-        println!("{}", error);
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 3);
+
+        let tests = [
+            Statement::Return(Expression::Integer(5)),
+            Statement::Return(Expression::Integer(10)),
+            Statement::Return(Expression::Integer(993322)),
+        ];
+
+        for (statement, test) in program.statements.iter().zip(tests) {
+            assert_eq!(statement, &test);
+        }
     }
 
-    assert_eq!(parser.errors.len(), 0);
-    assert_eq!(program.statements.len(), 1);
+    #[test]
+    fn test_identifier_expressions() {
+        let input = r"
+    foobar;
+    ";
 
-    let function = Expression::Identifier("add".to_string());
-    let argument_1 = Expression::Integer(1);
-    let argument_2 = Expression::Infix {
-        left: Box::new(Expression::Integer(2)),
-        operator: Token::Asterisk,
-        right: Box::new(Expression::Integer(3)),
-    };
-    let argument_3 = Expression::Infix {
-        left: Box::new(Expression::Integer(4)),
-        operator: Token::Plus,
-        right: Box::new(Expression::Integer(5)),
-    };
-    let call = Expression::Call {
-        function: Box::new(function),
-        arguments: vec![argument_1, argument_2, argument_3],
-    };
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
 
-    assert_eq!(program.statements[0], Statement::Expression(call));
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::Identifier("foobar".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_integer_expressions() {
+        let input = r"
+    5;
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::Integer(5))
+        );
+    }
+
+    #[test]
+    fn test_prefix_expressions() {
+        let input = r"
+    !5;
+    -15;
+    !true;
+    !false;
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 4);
+
+        let tests = [
+            Statement::Expression(Expression::Prefix {
+                operator: Token::Bang,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Prefix {
+                operator: Token::Minus,
+                right: Box::new(Expression::Integer(15)),
+            }),
+            Statement::Expression(Expression::Prefix {
+                operator: Token::Bang,
+                right: Box::new(Expression::Boolean(true)),
+            }),
+            Statement::Expression(Expression::Prefix {
+                operator: Token::Bang,
+                right: Box::new(Expression::Boolean(false)),
+            }),
+        ];
+
+        for (statement, test) in program.statements.iter().zip(tests) {
+            assert_eq!(statement, &test);
+        }
+    }
+
+    #[test]
+    fn test_infix_expressions() {
+        let input = r"
+    5 + 5;
+    5 - 5;
+    5 * 5;
+    5 / 5;
+    5 > 5;
+    5 < 5;
+    5 == 5;
+    5 != 5;
+    true == true;
+    true != false;
+    false == false;
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 11);
+
+        let tests = [
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Plus,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Minus,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Asterisk,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Slash,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Gt,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Lt,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Eq,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Integer(5)),
+                operator: Token::Ne,
+                right: Box::new(Expression::Integer(5)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Boolean(true)),
+                operator: Token::Eq,
+                right: Box::new(Expression::Boolean(true)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Boolean(true)),
+                operator: Token::Ne,
+                right: Box::new(Expression::Boolean(false)),
+            }),
+            Statement::Expression(Expression::Infix {
+                left: Box::new(Expression::Boolean(false)),
+                operator: Token::Eq,
+                right: Box::new(Expression::Boolean(false)),
+            }),
+        ];
+
+        for (statement, test) in program.statements.iter().zip(tests) {
+            assert_eq!(statement, &test);
+        }
+    }
+
+    #[test]
+    fn test_operator_precedence_parsing() {
+        let input = r"
+    -a * b;
+    !-a;
+    a + b + c;
+    a + b - c;
+    a * b * c;
+    a * b / c;
+    a + b / c;
+    a + b * c + d / e - f;
+    3 + 4; -5 * 5;
+    5 > 4 == 3 < 4;
+    5 < 4 != 3 > 4;
+    3 + 4 * 5 == 3 * 1 + 4 * 5;
+    true;
+    false;
+    3 > 5 == false;
+    3 < 5 == true;
+    1 + (2 + 3) + 4;
+    (5 + 5) * 2;
+    2 / (5 + 5);
+    -(5 + 5);
+    !(true == true);
+    a + add(b * c) + d;
+    add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8));
+    add(a + b + c * d / f + g);
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 25);
+
+        let tests = [
+            "((-a) * b)",
+            "(!(-a))",
+            "((a + b) + c)",
+            "((a + b) - c)",
+            "((a * b) * c)",
+            "((a * b) / c)",
+            "(a + (b / c))",
+            "(((a + (b * c)) + (d / e)) - f)",
+            "(3 + 4)",
+            "((-5) * 5)",
+            "((5 > 4) == (3 < 4))",
+            "((5 < 4) != (3 > 4))",
+            "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+            "true",
+            "false",
+            "((3 > 5) == false)",
+            "((3 < 5) == true)",
+            "((1 + (2 + 3)) + 4)",
+            "((5 + 5) * 2)",
+            "(2 / (5 + 5))",
+            "(-(5 + 5))",
+            "(!(true == true))",
+            "((a + add((b * c))) + d)",
+            "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+            "add((((a + b) + ((c * d) / f)) + g))",
+        ];
+
+        for (statement, test) in program.statements.iter().zip(tests) {
+            assert_eq!(statement.to_string(), test.to_string());
+        }
+    }
+
+    #[test]
+    fn test_boolean_expressions() {
+        let input = r"
+    true;
+    false;
+    let foobar = true;
+    let barfoo = false;
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 4);
+
+        let tests = [
+            Statement::Expression(Expression::Boolean(true)),
+            Statement::Expression(Expression::Boolean(false)),
+            Statement::Let {
+                name: Expression::Identifier("foobar".to_string()),
+                value: Expression::Boolean(true),
+            },
+            Statement::Let {
+                name: Expression::Identifier("barfoo".to_string()),
+                value: Expression::Boolean(false),
+            },
+        ];
+
+        for (statement, test) in program.statements.iter().zip(tests) {
+            assert_eq!(statement, &test);
+        }
+    }
+
+    #[test]
+    fn test_if_expressions() {
+        let input = r"
+    if (x < y) { x }
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        let condition = Expression::Infix {
+            left: Box::new(Expression::Identifier("x".to_string())),
+            operator: Token::Lt,
+            right: Box::new(Expression::Identifier("y".to_string())),
+        };
+
+        let statement_x = Statement::Expression(Expression::Identifier("x".to_string()));
+        let consequence = Statement::Block(vec![statement_x]);
+
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::If {
+                condition: Box::new(condition),
+                consequence: Box::new(consequence),
+                alternative: None
+            })
+        )
+    }
+
+    #[test]
+    fn test_if_else_expressions() {
+        let input = r"
+    if (x < y) { x } else { y }
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        let condition = Expression::Infix {
+            left: Box::new(Expression::Identifier("x".to_string())),
+            operator: Token::Lt,
+            right: Box::new(Expression::Identifier("y".to_string())),
+        };
+
+        let statement_x = Statement::Expression(Expression::Identifier("x".to_string()));
+        let consequence = Statement::Block(vec![statement_x]);
+
+        let statement_y = Statement::Expression(Expression::Identifier("y".to_string()));
+        let alternative = Statement::Block(vec![statement_y]);
+
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::If {
+                condition: Box::new(condition),
+                consequence: Box::new(consequence),
+                alternative: Some(Box::new(alternative))
+            })
+        )
+    }
+
+    #[test]
+    fn test_function_expressions() {
+        let input = r"
+    fn(x, y) { x + y; }
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        let parameters = vec![
+            Expression::Identifier("x".to_string()),
+            Expression::Identifier("y".to_string()),
+        ];
+        let expression = Expression::Infix {
+            left: Box::new(Expression::Identifier("x".to_string())),
+            operator: Token::Plus,
+            right: Box::new(Expression::Identifier("y".to_string())),
+        };
+        let block = Statement::Block(vec![Statement::Expression(expression)]);
+
+        assert_eq!(
+            program.statements[0],
+            Statement::Expression(Expression::Function {
+                parameters,
+                body: Box::new(block)
+            })
+        );
+    }
+
+    #[test]
+    fn test_function_parameter_parsing() {
+        let input = r"
+    fn() {}
+    fn(x) {}
+    fn(x, y) {}
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 3);
+
+        let tests = [
+            vec![],
+            vec![Expression::Identifier("x".to_string())],
+            vec![
+                Expression::Identifier("x".to_string()),
+                Expression::Identifier("y".to_string()),
+            ],
+        ];
+
+        for (statement, test) in program.statements.iter().zip(tests.iter()) {
+            if let Statement::Expression(Expression::Function { parameters, .. }) = statement {
+                assert_eq!(parameters, test);
+            }
+        }
+    }
+
+    #[test]
+    fn test_call_expressions() {
+        let input = r"
+    add(1, 2 * 3, 4 + 5);
+    ";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(parser.errors.len(), 0);
+        assert_eq!(program.statements.len(), 1);
+
+        let function = Expression::Identifier("add".to_string());
+        let argument_1 = Expression::Integer(1);
+        let argument_2 = Expression::Infix {
+            left: Box::new(Expression::Integer(2)),
+            operator: Token::Asterisk,
+            right: Box::new(Expression::Integer(3)),
+        };
+        let argument_3 = Expression::Infix {
+            left: Box::new(Expression::Integer(4)),
+            operator: Token::Plus,
+            right: Box::new(Expression::Integer(5)),
+        };
+        let call = Expression::Call {
+            function: Box::new(function),
+            arguments: vec![argument_1, argument_2, argument_3],
+        };
+
+        assert_eq!(program.statements[0], Statement::Expression(call));
+    }
 }
