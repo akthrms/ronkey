@@ -88,11 +88,9 @@ fn evaluate_prefix_expression(operator: &Token, right: Object) -> Result<Object,
         Token::Bang => evaluate_bang_prefix_expression(right)?,
         Token::Minus => evaluate_minus_prefix_expression(right)?,
         _ => {
-            return Err(format!(
-                "unknown operator: {}{}",
-                operator,
-                String::from(right)
-            ))
+            let right = right.get_type();
+            let message = format!("unknown operator: {}{}", operator, right);
+            return Err(message);
         }
     };
 
@@ -103,7 +101,11 @@ fn evaluate_bang_prefix_expression(right: Object) -> Result<Object, EvaluateErro
     let result = match right {
         Object::Boolean(false) => Object::Boolean(true),
         Object::Null => Object::Boolean(true),
-        _ => return Err(format!("unknown operator: !{}", String::from(right))),
+        _ => {
+            let right = right.get_type();
+            let message = format!("unknown operator: !{}", right);
+            return Err(message);
+        }
     };
 
     Ok(result)
@@ -112,7 +114,11 @@ fn evaluate_bang_prefix_expression(right: Object) -> Result<Object, EvaluateErro
 fn evaluate_minus_prefix_expression(right: Object) -> Result<Object, EvaluateError> {
     let result = match right {
         Object::Integer(value) => Object::Integer(-value),
-        _ => return Err(format!("unknown operator: -{}", String::from(right))),
+        _ => {
+            let right = right.get_type();
+            let message = format!("unknown operator: -{}", right);
+            return Err(message);
+        }
     };
 
     Ok(result)
@@ -131,12 +137,10 @@ fn evaluate_infix_expression(
             evaluate_boolean_infix_expression(*left, operator, *right)?
         }
         _ => {
-            return Err(format!(
-                "type mismatch: {} {} {}",
-                String::from(left),
-                operator,
-                String::from(right)
-            ))
+            let left = left.get_type();
+            let right = right.get_type();
+            let message = format!("type mismatch: {} {} {}", left, operator, right);
+            return Err(message);
         }
     };
 
@@ -157,7 +161,10 @@ fn evaluate_integer_infix_expression(
         Token::Gt => Object::Boolean(left > right),
         Token::Eq => Object::Boolean(left == right),
         Token::Ne => Object::Boolean(left != right),
-        _ => return Err(format!("unknown operator: Integer {} Integer", operator)),
+        _ => {
+            let message = format!("unknown operator: Integer {} Integer", operator);
+            return Err(message);
+        }
     };
 
     Ok(result)
@@ -171,7 +178,10 @@ fn evaluate_boolean_infix_expression(
     let result = match operator {
         Token::Eq => Object::Boolean(left == right),
         Token::Ne => Object::Boolean(left != right),
-        _ => return Err(format!("unknown operator: Boolean {} Boolean", operator)),
+        _ => {
+            let message = format!("unknown operator: Boolean {} Boolean", operator);
+            return Err(message);
+        }
     };
 
     Ok(result)

@@ -27,12 +27,12 @@ impl fmt::Display for Object {
     }
 }
 
-impl From<Object> for String {
-    fn from(object: Object) -> Self {
-        match object {
-            Object::Integer(_) => "Integer".to_string(),
-            Object::Boolean(_) => "Boolean".to_string(),
-            Object::Null => "Null".to_string(),
+impl Object {
+    pub fn get_type(&self) -> String {
+        match self {
+            Self::Integer(_) => "Integer".to_string(),
+            Self::Boolean(_) => "Boolean".to_string(),
+            Self::Null => "Null".to_string(),
             _ => "".to_string(),
         }
     }
