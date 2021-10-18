@@ -2,7 +2,7 @@ use crate::token::Token;
 use std::fmt;
 
 /// 文
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Statement {
     /// let
     Let { name: Expression, value: Expression },
@@ -31,7 +31,7 @@ impl fmt::Display for Statement {
 }
 
 /// 式
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Expression {
     /// 文字列
     Identifier(String),

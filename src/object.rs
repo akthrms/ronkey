@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// オブジェクト
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Object {
     /// 整数
     Integer(isize),
