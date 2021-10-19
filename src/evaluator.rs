@@ -6,7 +6,11 @@ type EvaluateError = String;
 
 pub struct Environment {}
 
-impl Environment {}
+impl Environment {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
 
 pub fn evaluate(program: Program) -> Result<Object, EvaluateError> {
     let mut result = Object::Default;
