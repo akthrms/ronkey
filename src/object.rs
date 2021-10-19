@@ -11,6 +11,8 @@ pub enum Object {
     Null,
     /// return文
     Return(Box<Object>),
+    /// let文
+    Let,
     /// デフォルト
     Default,
 }
@@ -22,7 +24,7 @@ impl fmt::Display for Object {
             Self::Boolean(value) => write!(f, "{}", value),
             Self::Null => write!(f, "null"),
             Self::Return(object) => write!(f, "{}", object),
-            Self::Default => write!(f, ""),
+            _ => write!(f, ""),
         }
     }
 }

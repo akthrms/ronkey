@@ -1,4 +1,4 @@
-use crate::evaluator::Environment;
+use crate::evaluator::{Environment, EvaluateResult};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use std::io;
@@ -24,11 +24,16 @@ pub fn start() -> io::Result<()> {
         }
 
         match env.evaluate(program) {
-            Ok(evaluated) => println!("{}", evaluated),
-            Err(message) => println!("ERROR: {}", message),
-        };
-
-        io::stdout().flush()?;
+            EvaluateResult::Reply(result) => {
+                println!("{}", result);
+                io::stdout().flush()?;
+            }
+            EvaluateResult::NoReply => (),
+            EvaluateResult::Error(error) => {
+                println!("ERROR: {}", error);
+                io::stdout().flush()?;
+            }
+        }
     }
 }
 

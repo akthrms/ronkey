@@ -4,7 +4,16 @@ use crate::token::Token;
 use std::collections::HashMap;
 
 type EvaluateError = String;
-type EvaluateResult = Result<Object, EvaluateError>;
+
+/// 評価結果
+pub enum EvaluateResult {
+    /// 返答する
+    Reply(Object),
+    /// 返答しない
+    NoReply,
+    /// エラー
+    Error(EvaluateError),
+}
 
 pub struct Environment {
     store: HashMap<String, Object>,
@@ -17,34 +26,36 @@ impl Environment {
         }
     }
 
-    fn get(&self, name: &String) -> EvaluateResult {
+    fn get(&self, name: &String) -> Result<Object, EvaluateError> {
         self.store
             .get(name)
             .map(|object| object.clone())
             .ok_or(format!("identifier not found: {}", name).to_string())
     }
 
-    fn set(&mut self, name: String, object: Object) -> EvaluateResult {
-        self.store
-            .insert(name, object)
-            .ok_or("unexpected error occurred".to_string())
+    fn set(&mut self, name: String, object: Object) -> Result<Object, EvaluateError> {
+        self.store.insert(name, object.clone());
+        Ok(object)
     }
 
     pub fn evaluate(&mut self, program: Program) -> EvaluateResult {
         let mut result = Object::Default;
 
         for statement in program.statements.iter() {
-            result = self.evaluate_statement(statement)?;
-
-            if let Object::Return(result) = result {
-                return Ok(*result);
+            result = match self.evaluate_statement(statement) {
+                Ok(Object::Return(result)) => return EvaluateResult::Reply(*result),
+                Ok(result) => result,
+                Err(error) => return EvaluateResult::Error(error),
             }
         }
 
-        Ok(result)
+        match result {
+            Object::Let => EvaluateResult::NoReply,
+            _ => EvaluateResult::Reply(result),
+        }
     }
 
-    fn evaluate_statement(&mut self, statement: &Statement) -> EvaluateResult {
+    fn evaluate_statement(&mut self, statement: &Statement) -> Result<Object, EvaluateError> {
         let result = match statement {
             Statement::Expression(expression) => self.evaluate_expression(expression)?,
             Statement::Block(statements) => self.evaluate_block_statement(statements)?,
@@ -55,7 +66,10 @@ impl Environment {
         Ok(result)
     }
 
-    fn evaluate_block_statement(&mut self, statements: &Vec<Statement>) -> EvaluateResult {
+    fn evaluate_block_statement(
+        &mut self,
+        statements: &Vec<Statement>,
+    ) -> Result<Object, EvaluateError> {
         let mut result = Object::Default;
 
         for statement in statements {
@@ -69,7 +83,10 @@ impl Environment {
         Ok(result)
     }
 
-    fn evaluate_return_statement(&mut self, expression: &Expression) -> EvaluateResult {
+    fn evaluate_return_statement(
+        &mut self,
+        expression: &Expression,
+    ) -> Result<Object, EvaluateError> {
         let result = self.evaluate_expression(expression)?;
         let result = Box::new(result);
         let result = Object::Return(result);
@@ -77,20 +94,25 @@ impl Environment {
         Ok(result)
     }
 
-    fn evaluate_let_statement(&mut self, name: &Expression, object: &Expression) -> EvaluateResult {
+    fn evaluate_let_statement(
+        &mut self,
+        name: &Expression,
+        object: &Expression,
+    ) -> Result<Object, EvaluateError> {
         let result = match name {
             Expression::Identifier(name) => {
                 let name = name.to_string();
                 let object = self.evaluate_expression(object)?;
-                self.set(name, object)?
+                self.set(name, object)?;
+                Object::Let
             }
-            _ => return Err("unexpected error occurred".to_string()),
+            _ => return Err("unexpected error occurred in let binding".to_string()),
         };
 
         Ok(result)
     }
 
-    fn evaluate_expression(&mut self, expression: &Expression) -> EvaluateResult {
+    fn evaluate_expression(&mut self, expression: &Expression) -> Result<Object, EvaluateError> {
         let result = match expression {
             Expression::Integer(value) => Object::Integer(value.clone()),
             Expression::Boolean(value) => Object::Boolean(value.clone()),
@@ -123,7 +145,11 @@ impl Environment {
         Ok(result)
     }
 
-    fn evaluate_prefix_expression(&mut self, operator: &Token, right: Object) -> EvaluateResult {
+    fn evaluate_prefix_expression(
+        &mut self,
+        operator: &Token,
+        right: Object,
+    ) -> Result<Object, EvaluateError> {
         let result = match operator {
             Token::Bang => self.evaluate_bang_prefix_expression(right)?,
             Token::Minus => self.evaluate_minus_prefix_expression(right)?,
@@ -137,21 +163,17 @@ impl Environment {
         Ok(result)
     }
 
-    fn evaluate_bang_prefix_expression(&mut self, right: Object) -> EvaluateResult {
+    fn evaluate_bang_prefix_expression(&mut self, right: Object) -> Result<Object, EvaluateError> {
         let result = match right {
             Object::Boolean(false) => Object::Boolean(true),
             Object::Null => Object::Boolean(true),
-            _ => {
-                let right = right.get_type();
-                let message = format!("unknown operator: !{}", right);
-                return Err(message);
-            }
+            _ => Object::Boolean(false),
         };
 
         Ok(result)
     }
 
-    fn evaluate_minus_prefix_expression(&mut self, right: Object) -> EvaluateResult {
+    fn evaluate_minus_prefix_expression(&mut self, right: Object) -> Result<Object, EvaluateError> {
         let result = match right {
             Object::Integer(value) => Object::Integer(-value),
             _ => {
@@ -169,7 +191,7 @@ impl Environment {
         left: Object,
         operator: &Token,
         right: Object,
-    ) -> EvaluateResult {
+    ) -> Result<Object, EvaluateError> {
         let result = match (&left, &right) {
             (Object::Integer(left), Object::Integer(right)) => {
                 let left = *left;
@@ -197,7 +219,7 @@ impl Environment {
         left: isize,
         operator: &Token,
         right: isize,
-    ) -> EvaluateResult {
+    ) -> Result<Object, EvaluateError> {
         let result = match operator {
             Token::Plus => Object::Integer(left + right),
             Token::Minus => Object::Integer(left - right),
@@ -221,7 +243,7 @@ impl Environment {
         left: bool,
         operator: &Token,
         right: bool,
-    ) -> EvaluateResult {
+    ) -> Result<Object, EvaluateError> {
         let result = match operator {
             Token::Eq => Object::Boolean(left == right),
             Token::Ne => Object::Boolean(left != right),
@@ -239,9 +261,8 @@ impl Environment {
         condition: Object,
         consequence: &Statement,
         alternative: &Option<Box<Statement>>,
-    ) -> EvaluateResult {
-        let truthy = is_truthy(condition);
-        let result = match (truthy, alternative) {
+    ) -> Result<Object, EvaluateError> {
+        let result = match (is_truthy(condition), alternative) {
             (true, _) => self.evaluate_statement(consequence)?,
             (_, Some(statement)) => self.evaluate_statement(statement)?,
             (_, _) => Object::Null,
@@ -250,7 +271,7 @@ impl Environment {
         Ok(result)
     }
 
-    fn evaluate_identifier_expression(&mut self, name: &String) -> EvaluateResult {
+    fn evaluate_identifier_expression(&mut self, name: &String) -> Result<Object, EvaluateError> {
         self.get(name)
     }
 }
@@ -299,8 +320,9 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            if let Ok(result) = test_evaluate(input) {
-                assert_eq!(result, expected);
+            match test_evaluate(input) {
+                EvaluateResult::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
             }
         }
     }
@@ -330,8 +352,10 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            if let Ok(result) = test_evaluate(input) {
-                assert_eq!(result, expected);
+            let evaluated = test_evaluate(input);
+            match evaluated {
+                EvaluateResult::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
             }
         }
     }
@@ -348,8 +372,9 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            if let Ok(result) = test_evaluate(input) {
-                assert_eq!(result, expected);
+            match test_evaluate(input) {
+                EvaluateResult::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
             }
         }
     }
@@ -367,8 +392,9 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            if let Ok(result) = test_evaluate(input) {
-                assert_eq!(result, expected);
+            match test_evaluate(input) {
+                EvaluateResult::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
             }
         }
     }
@@ -387,8 +413,9 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            if let Ok(result) = test_evaluate(input) {
-                assert_eq!(result, expected);
+            match test_evaluate(input) {
+                EvaluateResult::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
             }
         }
     }
@@ -409,11 +436,13 @@ mod tests {
                 "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
                 "unknown operator: Boolean + Boolean",
             ),
+            ("foobar", "identifier not found: foobar"),
         ];
 
         for (input, expected) in tests {
-            if let Err(message) = test_evaluate(input) {
-                assert_eq!(message, expected);
+            match test_evaluate(input) {
+                EvaluateResult::Error(error) => assert_eq!(error, expected),
+                _ => unreachable!(),
             }
         }
     }
@@ -431,8 +460,9 @@ mod tests {
         ];
 
         for (input, expected) in tests {
-            if let Ok(result) = test_evaluate(input) {
-                assert_eq!(result, expected);
+            match test_evaluate(input) {
+                EvaluateResult::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
             }
         }
     }
