@@ -4,6 +4,10 @@ use crate::token::Token;
 
 type EvaluateError = String;
 
+pub struct Environment {}
+
+impl Environment {}
+
 pub fn evaluate(program: Program) -> Result<Object, EvaluateError> {
     let mut result = Object::Default;
 
