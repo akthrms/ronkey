@@ -1,10 +1,12 @@
-use crate::evaluator::evaluate;
+use crate::evaluator::Environment;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use std::io;
 use std::io::Write;
 
 pub fn start() -> io::Result<()> {
+    let mut env = Environment::new();
+
     loop {
         print!(">> ");
         io::stdout().flush()?;
@@ -21,7 +23,7 @@ pub fn start() -> io::Result<()> {
             continue;
         }
 
-        match evaluate(program) {
+        match env.evaluate(program) {
             Ok(evaluated) => println!("{}", evaluated),
             Err(message) => println!("ERROR: {}", message),
         };
