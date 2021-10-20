@@ -1,6 +1,7 @@
 use crate::evaluator::{Environment, EvaluateResult};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use colored::Colorize;
 use std::io;
 use std::io::Write;
 
@@ -30,7 +31,8 @@ pub fn start() -> io::Result<()> {
             }
             EvaluateResult::NoReply => (),
             EvaluateResult::Error(error) => {
-                println!("ERROR: {}", error);
+                let message = format!("error: {}", error).red();
+                println!("{}", message);
                 io::stdout().flush()?;
             }
         }
@@ -54,10 +56,10 @@ const MONKEY_FACE: &str = r#"
 fn print_parse_errors(errors: Vec<String>) -> io::Result<()> {
     println!("{}", MONKEY_FACE);
     println!("Woops! We ran into some monkey business here!");
-    println!(" parser errors:");
+    println!("parser errors:");
 
     for error in errors {
-        println!("\t{}", error);
+        println!("\t{}", error.red());
         io::stdout().flush()?;
     }
 
