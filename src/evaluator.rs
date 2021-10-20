@@ -620,4 +620,22 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_closures() {
+        let input = r"
+let newAdder = fn(x) {
+    fn(y) { x + y };
+};
+let addTwo = newAdder(2);
+addTwo(2);
+";
+
+        let expected = Object::Integer(4);
+
+        match test_eval(input) {
+            Response::Reply(result) => assert_eq!(result, expected),
+            _ => unreachable!(),
+        }
+    }
 }
