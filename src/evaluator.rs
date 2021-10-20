@@ -23,20 +23,37 @@ pub enum Response {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Environment {
     store: HashMap<String, Object>,
+    outer: Option<Box<Environment>>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Self {
             store: HashMap::new(),
+            outer: None,
+        }
+    }
+
+    fn new_with_outer(env: Box<Environment>) -> Self {
+        Self {
+            store: HashMap::new(),
+            outer: Some(env),
         }
     }
 
     fn get(&self, name: &String) -> EvalResult {
-        self.store
-            .get(name)
-            .map(|object| object.clone())
-            .ok_or(format!("identifier not found: {}", name).to_string())
+        let result = match self.store.get(name) {
+            Some(object) => object.clone(),
+            None => match &self.outer {
+                Some(env) => env.get(name)?,
+                None => {
+                    let message = format!("identifier not found: {}", name).to_string();
+                    return Err(message);
+                }
+            },
+        };
+
+        Ok(result)
     }
 
     fn set(&mut self, name: String, object: Object) -> EvalResult {
@@ -144,7 +161,14 @@ impl Environment {
             Expression::Function { parameters, body } => {
                 self.eval_function_expression(parameters, body)?
             }
-            _ => unimplemented!(),
+            Expression::Call {
+                function,
+                arguments,
+            } => {
+                let function = self.eval_expression(function)?;
+                let arguments = self.eval_expressions(arguments)?;
+                self.apply_function(function, arguments)?
+            }
         };
 
         Ok(result)
@@ -292,6 +316,66 @@ impl Environment {
 
         Ok(result)
     }
+
+    fn eval_expressions(
+        &mut self,
+        expressions: &Vec<Expression>,
+    ) -> Result<Vec<Object>, EvalError> {
+        let mut result = vec![];
+
+        for expression in expressions.iter() {
+            result.push(self.eval_expression(expression)?);
+        }
+
+        Ok(result)
+    }
+
+    fn apply_function(&mut self, function: Object, arguments: Vec<Object>) -> EvalResult {
+        let result = match &function {
+            Object::Function {
+                parameters,
+                body,
+                env,
+            } => {
+                self.check_arity(parameters.len(), arguments.len())?;
+
+                let mut env = Self::new_with_outer(Box::new(env.clone()));
+
+                for (i, parameter) in parameters.iter().enumerate() {
+                    match parameter {
+                        Expression::Identifier(name) => {
+                            env.set(name.to_string(), arguments[i].clone())?;
+                        }
+                        _ => {
+                            let message = format!("invalid argument index: {}", 0).to_string();
+                            return Err(message);
+                        }
+                    }
+                }
+
+                env.eval_statement(&body)?
+            }
+            _ => {
+                let message = format!("not a function: {}", function.get_type()).to_string();
+                return Err(message);
+            }
+        };
+
+        Ok(result)
+    }
+
+    fn check_arity(&mut self, parameters: usize, arguments: usize) -> Result<(), EvalError> {
+        if parameters == arguments {
+            Ok(())
+        } else {
+            let message = format!(
+                "expected arity to be {}, got {} instead",
+                parameters, arguments
+            )
+            .to_string();
+            Err(message)
+        }
+    }
 }
 
 fn is_truthy(object: Object) -> bool {
@@ -304,7 +388,6 @@ fn is_truthy(object: Object) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::Expression;
     use crate::evaluator::{Environment, Response};
     use crate::lexer::Lexer;
     use crate::object::Object;
@@ -487,20 +570,54 @@ mod tests {
 
     #[test]
     fn test_function_expressions() {
-        let test = "fn(x) { x + 2; };";
+        let input = "fn(x) { x + 2; };";
 
-        match test_eval(test) {
+        match test_eval(input) {
             Response::Reply(result) => match result {
                 Object::Function {
                     parameters, body, ..
                 } => {
                     assert_eq!(parameters.len(), 1);
-                    assert_eq!(parameters[0], Expression::Identifier("x".to_string()));
+                    assert_eq!(parameters[0].to_string(), "x".to_string());
                     assert_eq!(body.to_string(), "(x + 2)".to_string());
                 }
                 _ => unreachable!(),
             },
             _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_function_application() {
+        let tests = [
+            (
+                "let identity = fn(x) { x; }; identity(5);",
+                Object::Integer(5),
+            ),
+            (
+                "let identity = fn(x) { return x; }; identity(5);",
+                Object::Integer(5),
+            ),
+            (
+                "let double = fn(x) { x * 2; }; double(5);",
+                Object::Integer(10),
+            ),
+            (
+                "let add = fn(x, y) { x + y; }; add(5, 5);",
+                Object::Integer(10),
+            ),
+            (
+                "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+                Object::Integer(20),
+            ),
+            ("fn(x) { x; }(5)", Object::Integer(5)),
+        ];
+
+        for (input, expected) in tests {
+            match test_eval(input) {
+                Response::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
+            }
         }
     }
 }
