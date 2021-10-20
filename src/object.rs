@@ -1,7 +1,9 @@
+use crate::ast::{Expression, Statement};
+use crate::evaluator::Environment;
 use std::fmt;
 
 /// オブジェクト
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Object {
     /// 整数
     Integer(isize),
@@ -11,6 +13,12 @@ pub enum Object {
     Null,
     /// return文
     Return(Box<Object>),
+    /// 関数
+    Function {
+        parameters: Vec<Expression>,
+        body: Statement,
+        env: Environment,
+    },
     /// let文
     Let,
     /// デフォルト
@@ -24,6 +32,7 @@ impl fmt::Display for Object {
             Self::Boolean(value) => write!(f, "{} : Boolean", value),
             Self::Null => write!(f, "Null"),
             Self::Return(object) => write!(f, "{} : {}", object, object.get_type()),
+            Self::Function { .. } => write!(f, "Function"),
             _ => write!(f, ""),
         }
     }
@@ -35,6 +44,7 @@ impl Object {
             Self::Integer(_) => "Integer".to_string(),
             Self::Boolean(_) => "Boolean".to_string(),
             Self::Null => "Null".to_string(),
+            Self::Function { .. } => "Function".to_string(),
             _ => "".to_string(),
         }
     }

@@ -1,4 +1,4 @@
-use crate::evaluator::{Environment, EvaluateResult};
+use crate::evaluator::{Environment, Response};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 use colored::Colorize;
@@ -24,13 +24,13 @@ pub fn start() -> io::Result<()> {
             continue;
         }
 
-        match env.evaluate(program) {
-            EvaluateResult::Reply(result) => {
+        match env.eval(program) {
+            Response::Reply(result) => {
                 println!("{}", result);
                 io::stdout().flush()?;
             }
-            EvaluateResult::NoReply => (),
-            EvaluateResult::Error(error) => {
+            Response::NoReply => (),
+            Response::Error(error) => {
                 let message = format!("error: {}", error).red();
                 println!("{}", message);
                 io::stdout().flush()?;
