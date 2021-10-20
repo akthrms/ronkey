@@ -3,6 +3,7 @@ use crate::object::Object;
 use crate::token::Token;
 use std::collections::HashMap;
 
+/// 評価エラー
 type EvaluateError = String;
 
 /// 評価結果
@@ -15,6 +16,7 @@ pub enum EvaluateResult {
     Error(EvaluateError),
 }
 
+/// 環境
 pub struct Environment {
     store: HashMap<String, Object>,
 }

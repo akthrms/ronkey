@@ -2,6 +2,7 @@ use crate::ast::{Expression, Program, Statement};
 use crate::lexer::Lexer;
 use crate::token::Token;
 
+/// 構文解析エラー
 type ParseError = String;
 
 /// 優先順位
@@ -35,6 +36,7 @@ impl From<Token> for Precedence {
     }
 }
 
+/// 構文解析器
 pub struct Parser<'a> {
     lexer: &'a mut Lexer,
     current_token: Token,

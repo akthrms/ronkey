@@ -20,10 +20,10 @@ pub enum Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Integer(value) => write!(f, "{}", value),
-            Self::Boolean(value) => write!(f, "{}", value),
-            Self::Null => write!(f, "null"),
-            Self::Return(object) => write!(f, "{}", object),
+            Self::Integer(value) => write!(f, "{} : Integer", value),
+            Self::Boolean(value) => write!(f, "{} : Boolean", value),
+            Self::Null => write!(f, "Null"),
+            Self::Return(object) => write!(f, "{} : {}", object, object.get_type()),
             _ => write!(f, ""),
         }
     }
