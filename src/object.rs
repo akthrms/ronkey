@@ -1,5 +1,5 @@
 use crate::ast::{Expression, Statement};
-use crate::evaluator::Environment;
+use crate::evaluator::{Environment, EvalResult};
 use std::fmt;
 
 /// オブジェクト
@@ -21,6 +21,10 @@ pub enum Object {
         body: Statement,
         env: Environment,
     },
+    /// 組み込み関数
+    Buildin {
+        function: fn(Vec<Object>) -> EvalResult,
+    },
     /// let文
     Let,
     /// デフォルト
@@ -36,6 +40,7 @@ impl fmt::Display for Object {
             Self::Null => write!(f, "Null"),
             Self::Return(object) => write!(f, "{} : {}", object, object.get_type()),
             Self::Function { .. } => write!(f, "Function"),
+            Self::Buildin { .. } => write!(f, "Buildin Function"),
             _ => write!(f, ""),
         }
     }
@@ -49,6 +54,7 @@ impl Object {
             Self::Strings(_) => "String".to_string(),
             Self::Null => "Null".to_string(),
             Self::Function { .. } => "Function".to_string(),
+            Self::Buildin { .. } => "Buildin Function".to_string(),
             _ => "".to_string(),
         }
     }

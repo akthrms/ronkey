@@ -1,13 +1,14 @@
 use crate::ast::{Expression, Program, Statement};
+use crate::buildin;
 use crate::object::Object;
 use crate::token::Token;
 use std::collections::HashMap;
 
 /// 評価エラー
-type EvalError = String;
+pub type EvalError = String;
 
 /// 評価結果
-type EvalResult = Result<Object, EvalError>;
+pub type EvalResult = Result<Object, EvalError>;
 
 /// レスポンス
 pub enum Response {
@@ -24,6 +25,7 @@ pub enum Response {
 pub struct Environment {
     store: HashMap<String, Object>,
     outer: Option<Box<Environment>>,
+    buildin: HashMap<String, Object>,
 }
 
 impl Environment {
@@ -31,6 +33,7 @@ impl Environment {
         Self {
             store: HashMap::new(),
             outer: None,
+            buildin: buildin::new(),
         }
     }
 
@@ -38,6 +41,7 @@ impl Environment {
         Self {
             store: HashMap::new(),
             outer: Some(env),
+            buildin: buildin::new(),
         }
     }
 
@@ -328,7 +332,13 @@ impl Environment {
     }
 
     fn eval_identifier_expression(&mut self, name: &String) -> EvalResult {
-        self.get(name)
+        let result = match (self.get(name), self.buildin.get(name)) {
+            (Ok(object), _) => object,
+            (Err(_), Some(object)) => object.clone(),
+            (Err(error), None) => return Err(error),
+        };
+
+        Ok(result)
     }
 
     fn eval_function_expression(
@@ -383,6 +393,7 @@ impl Environment {
 
                 env.eval_statement(&body)?
             }
+            Object::Buildin { function } => function(arguments)?,
             _ => {
                 let message = format!("not a function: {}", function.get_type()).to_string();
                 return Err(message);

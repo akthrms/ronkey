@@ -1,4 +1,5 @@
 mod ast;
+mod buildin;
 mod evaluator;
 mod lexer;
 mod object;
