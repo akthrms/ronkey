@@ -235,6 +235,11 @@ impl Environment {
                 let right = *right;
                 self.eval_boolean_infix_expression(left, operator, right)?
             }
+            (Object::Strings(left), Object::Strings(right)) => {
+                let left = left.to_string();
+                let right = right.to_string();
+                self.eval_string_infix_expression(left, operator, right)?
+            }
             _ => {
                 let left = left.get_type();
                 let right = right.get_type();
@@ -281,6 +286,25 @@ impl Environment {
             Token::Ne => Object::Boolean(left != right),
             _ => {
                 let message = format!("unknown operator: Boolean {} Boolean", operator);
+                return Err(message);
+            }
+        };
+
+        Ok(result)
+    }
+
+    fn eval_string_infix_expression(
+        &mut self,
+        left: String,
+        operator: &Token,
+        right: String,
+    ) -> EvalResult {
+        let result = match operator {
+            Token::Plus => Object::Strings(format!("{}{}", left, right)),
+            Token::Eq => Object::Boolean(left == right),
+            Token::Ne => Object::Boolean(left != right),
+            _ => {
+                let message = format!("unknown operator: String {} String", operator);
                 return Err(message);
             }
         };
@@ -455,6 +479,11 @@ mod tests {
             ("(1 < 2) == false", Object::Boolean(false)),
             ("(1 > 2) == true", Object::Boolean(false)),
             ("(1 > 2) == false", Object::Boolean(true)),
+            (r#""Hello World!" == "Hello World!""#, Object::Boolean(true)),
+            (
+                r#""Hello World!" != "Hello World!""#,
+                Object::Boolean(false),
+            ),
         ];
 
         for (input, expected) in tests {
@@ -542,6 +571,7 @@ mod tests {
                 "unknown operator: Boolean + Boolean",
             ),
             ("foobar", "identifier not found: foobar"),
+            (r#""Hello" - "World""#, "unknown operator: String - String"),
         ];
 
         for (input, expected) in tests {
@@ -646,6 +676,18 @@ addTwo(2);
     #[test]
     fn test_string() {
         let input = r#""Hello World!""#;
+
+        let expected = Object::Strings("Hello World!".to_string());
+
+        match test_eval(input) {
+            Response::Reply(result) => assert_eq!(result, expected),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_string_concatenation() {
+        let input = r#""Hello" + " " + "World!""#;
 
         let expected = Object::Strings("Hello World!".to_string());
 
