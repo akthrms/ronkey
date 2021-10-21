@@ -583,6 +583,11 @@ mod tests {
             ),
             ("foobar", "identifier not found: foobar"),
             (r#""Hello" - "World""#, "unknown operator: String - String"),
+            (r#"len(1)"#, "argument to `len` not supported, got Integer"),
+            (
+                r#"len("one", "two")"#,
+                "wrong number of arguments. got=2, want=1",
+            ),
         ];
 
         for (input, expected) in tests {
@@ -705,6 +710,22 @@ addTwo(2);
         match test_eval(input) {
             Response::Reply(result) => assert_eq!(result, expected),
             _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_buildin_functions() {
+        let tests = [
+            (r#"len("")"#, Object::Integer(0)),
+            (r#"len("four")"#, Object::Integer(4)),
+            (r#"len("hello world")"#, Object::Integer(11)),
+        ];
+
+        for (input, expected) in tests {
+            match test_eval(input) {
+                Response::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
+            }
         }
     }
 }
