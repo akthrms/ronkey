@@ -52,6 +52,10 @@ pub enum Token {
     LBrace,
     /// }
     RBrace,
+    /// [
+    LBracket,
+    /// ]
+    RBracket,
 
     // キーワード
     /// fn
@@ -91,6 +95,8 @@ impl fmt::Display for Token {
             Token::LParen => write!(f, "("),
             Token::RParen => write!(f, ")"),
             Token::LBrace => write!(f, "{{"),
+            Token::LBracket => write!(f, "["),
+            Token::RBracket => write!(f, "]"),
             Token::RBrace => write!(f, "}}"),
             Token::Function => write!(f, "fn"),
             Token::Let => write!(f, "let"),

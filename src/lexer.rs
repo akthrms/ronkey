@@ -66,6 +66,8 @@ impl Lexer {
             ')' => Token::RParen,
             '{' => Token::LBrace,
             '}' => Token::RBrace,
+            '[' => Token::LBracket,
+            ']' => Token::RBracket,
             '\u{0}' => Token::Eof,
             '"' => self.read_string(),
             _ => {
@@ -184,6 +186,7 @@ if (5 < 10) {
 10 != 9;
 "foobar";
 "foo bar";
+[1, 2];
 "#;
 
         let tests = [
@@ -263,6 +266,12 @@ if (5 < 10) {
             Token::Strings("foobar".to_string()),
             Token::Semicolon,
             Token::Strings("foo bar".to_string()),
+            Token::Semicolon,
+            Token::LBracket,
+            Token::Int(1),
+            Token::Comma,
+            Token::Int(2),
+            Token::RBracket,
             Token::Semicolon,
             Token::Eof,
         ];
