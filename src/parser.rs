@@ -153,6 +153,7 @@ impl<'a> Parser<'a> {
         let mut expression = match &self.current_token {
             Token::Ident(value) => Expression::Identifier(value.clone()),
             Token::Int(value) => Expression::Integer(value.clone()),
+            Token::Strings(value) => Expression::Strings(value.clone()),
             Token::Bang | Token::Minus => self.parse_prefix_expression()?,
             Token::True => Expression::Boolean(true),
             Token::False => Expression::Boolean(false),
@@ -925,5 +926,21 @@ mod tests {
         };
 
         assert_eq!(program.statements[0], Statement::Expression(call));
+    }
+
+    #[test]
+    fn test_string_expressions() {
+        let input = r#""hello world""#;
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        let string = Expression::Strings("hello world".to_string());
+        assert_eq!(program.statements[0], Statement::Expression(string));
     }
 }

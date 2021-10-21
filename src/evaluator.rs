@@ -135,6 +135,10 @@ impl Environment {
                 let value = *value;
                 Object::Boolean(value)
             }
+            Expression::Strings(value) => {
+                let value = value.to_string();
+                Object::Strings(value)
+            }
             Expression::Prefix { operator, right } => {
                 let right = self.eval_expression(right)?;
                 self.eval_prefix_expression(operator, right)?
@@ -632,6 +636,18 @@ addTwo(2);
 ";
 
         let expected = Object::Integer(4);
+
+        match test_eval(input) {
+            Response::Reply(result) => assert_eq!(result, expected),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_string() {
+        let input = r#""Hello World!""#;
+
+        let expected = Object::Strings("Hello World!".to_string());
 
         match test_eval(input) {
             Response::Reply(result) => assert_eq!(result, expected),

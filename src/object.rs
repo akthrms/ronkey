@@ -9,6 +9,8 @@ pub enum Object {
     Integer(isize),
     /// 真偽値
     Boolean(bool),
+    /// 文字列
+    Strings(String),
     /// null
     Null,
     /// return文
@@ -30,6 +32,7 @@ impl fmt::Display for Object {
         match self {
             Self::Integer(value) => write!(f, "{} : Integer", value),
             Self::Boolean(value) => write!(f, "{} : Boolean", value),
+            Self::Strings(value) => write!(f, "{} : String", value),
             Self::Null => write!(f, "Null"),
             Self::Return(object) => write!(f, "{} : {}", object, object.get_type()),
             Self::Function { .. } => write!(f, "Function"),
@@ -43,6 +46,7 @@ impl Object {
         match self {
             Self::Integer(_) => "Integer".to_string(),
             Self::Boolean(_) => "Boolean".to_string(),
+            Self::Strings(_) => "String".to_string(),
             Self::Null => "Null".to_string(),
             Self::Function { .. } => "Function".to_string(),
             _ => "".to_string(),

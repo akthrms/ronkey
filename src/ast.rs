@@ -33,10 +33,12 @@ impl fmt::Display for Statement {
 /// 式
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Expression {
-    /// 文字列
+    /// 識別子
     Identifier(String),
     /// 数値
     Integer(isize),
+    /// 文字列
+    Strings(String),
     /// 前置演算子
     Prefix {
         operator: Token,
@@ -75,6 +77,7 @@ impl fmt::Display for Expression {
         match self {
             Self::Identifier(value) => write!(f, "{}", value),
             Self::Integer(value) => write!(f, "{}", value),
+            Self::Strings(value) => write!(f, "{}", value),
             Self::Prefix { operator, right } => write!(f, "({}{})", operator, right),
             Self::Infix {
                 left,
