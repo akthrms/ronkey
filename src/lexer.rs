@@ -67,6 +67,7 @@ impl Lexer {
             '{' => Token::LBrace,
             '}' => Token::RBrace,
             '\u{0}' => Token::Eof,
+            '"' => self.read_string(),
             _ => {
                 if self.is_letter() {
                     return self.read_ident();
@@ -126,6 +127,19 @@ impl Lexer {
         }
     }
 
+    fn read_string(&mut self) -> Token {
+        let start_position = self.position + 1;
+
+        self.read_char();
+
+        while self.ch != '"' && self.ch != (0 as char) {
+            self.read_char();
+        }
+
+        let string = String::from_iter(&self.input[start_position..self.position]);
+        Token::Strings(string)
+    }
+
     fn is_letter(&self) -> bool {
         self.ch.is_alphabetic()
     }
@@ -148,27 +162,29 @@ mod tests {
 
     #[test]
     fn test_next_token() {
-        let input = r"
-    let five = 5;
-    let ten = 10;
+        let input = r#"
+let five = 5;
+let ten = 10;
 
-    let add = fn(x, y) {
-        x + y;
-    };
+let add = fn(x, y) {
+    x + y;
+};
 
-    let result = add(five, ten);
-    !-/*5;
-    5 < 10 > 5;
+let result = add(five, ten);
+!-/*5;
+5 < 10 > 5;
 
-    if (5 < 10) {
-        return true;
-    } else {
-        return false;
-    }
+if (5 < 10) {
+    return true;
+} else {
+    return false;
+}
 
-    10 == 10;
-    10 != 9;
-    ";
+10 == 10;
+10 != 9;
+"foobar";
+"foo bar";
+"#;
 
         let tests = [
             Token::Let,
@@ -243,6 +259,10 @@ mod tests {
             Token::Int(10),
             Token::Ne,
             Token::Int(9),
+            Token::Semicolon,
+            Token::Strings("foobar".to_string()),
+            Token::Semicolon,
+            Token::Strings("foo bar".to_string()),
             Token::Semicolon,
             Token::Eof,
         ];

@@ -8,10 +8,12 @@ pub enum Token {
     Eof,
 
     // 識別子 + リテラル
-    /// 文字列
+    /// 識別子
     Ident(String),
     /// 数値
     Int(isize),
+    /// 文字列
+    Strings(String),
 
     // 演算子
     /// =
@@ -73,6 +75,7 @@ impl fmt::Display for Token {
         match self {
             Token::Ident(value) => write!(f, "{}", value),
             Token::Int(value) => write!(f, "Int({})", value),
+            Token::Strings(value) => write!(f, "String({})", value),
             Token::Assign => write!(f, "="),
             Token::Plus => write!(f, "+"),
             Token::Minus => write!(f, "-"),
