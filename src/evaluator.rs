@@ -181,7 +181,11 @@ impl Environment {
                 let elements = self.eval_expressions(elements)?;
                 Object::Array(elements)
             }
-            _ => unimplemented!(),
+            Expression::Index { left, index } => {
+                let left = self.eval_expression(left)?;
+                let index = self.eval_expression(index)?;
+                self.eval_index_expression(left, index)?
+            }
         };
 
         Ok(result)
@@ -369,6 +373,33 @@ impl Environment {
         for expression in expressions.iter() {
             result.push(self.eval_expression(expression)?);
         }
+
+        Ok(result)
+    }
+
+    fn eval_index_expression(&mut self, left: Object, index: Object) -> EvalResult {
+        match (&left, &index) {
+            (Object::Array(_), Object::Integer(_)) => self.eval_array_index_expression(left, index),
+            _ => {
+                let message = format!("index operator not supported: {}", left.get_type());
+                return Err(message);
+            }
+        }
+    }
+
+    fn eval_array_index_expression(&mut self, array: Object, index: Object) -> EvalResult {
+        let result = match (&array, index) {
+            (Object::Array(elements), Object::Integer(index)) => {
+                let max = elements.len() - 1;
+
+                if index < 0 || index > (max as isize) {
+                    Object::Null
+                } else {
+                    elements[index as usize].clone()
+                }
+            }
+            _ => unreachable!(),
+        };
 
         Ok(result)
     }
@@ -746,6 +777,35 @@ addTwo(2);
         match test_eval(input) {
             Response::Reply(result) => assert_eq!(result, expected),
             _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_array_index_expressions() {
+        let tests = [
+            ("[1, 2, 3][0]", Object::Integer(1)),
+            ("[1, 2, 3][1]", Object::Integer(2)),
+            ("[1, 2, 3][2]", Object::Integer(3)),
+            ("let i = 0; [1][i]", Object::Integer(1)),
+            ("[1, 2, 3][1 + 1]", Object::Integer(3)),
+            ("let myArray = [1, 2, 3]; myArray[2]", Object::Integer(3)),
+            (
+                "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2]",
+                Object::Integer(6),
+            ),
+            (
+                "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]",
+                Object::Integer(2),
+            ),
+            ("[1, 2, 3][3]", Object::Null),
+            ("[1, 2, 3][-1]", Object::Null),
+        ];
+
+        for (input, expected) in tests {
+            match test_eval(input) {
+                Response::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
+            }
         }
     }
 }
