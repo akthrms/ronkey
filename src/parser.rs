@@ -21,6 +21,8 @@ enum Precedence {
     Prefix,
     /// myFunction(x)
     Call,
+    /// array[x]
+    Index,
 }
 
 impl From<Token> for Precedence {
@@ -31,6 +33,7 @@ impl From<Token> for Precedence {
             Token::Plus | Token::Minus => Self::Sum,
             Token::Slash | Token::Asterisk => Self::Product,
             Token::LParen => Self::Call,
+            Token::LBracket => Self::Index,
             _ => Self::Lowest,
         }
     }
@@ -188,6 +191,10 @@ impl<'a> Parser<'a> {
                     self.next_token();
                     self.parse_infix_expression(expression)?
                 }
+                &Token::LBracket => {
+                    self.next_token();
+                    self.parse_index_expression(expression)?
+                }
                 _ => expression,
             };
         }
@@ -337,6 +344,21 @@ impl<'a> Parser<'a> {
     fn parse_array_expression(&mut self) -> Result<Expression, ParseError> {
         let arguments = self.parse_expressions(&Token::RBracket)?;
         let expression = Expression::Array(arguments);
+
+        Ok(expression)
+    }
+
+    fn parse_index_expression(&mut self, left: Expression) -> Result<Expression, ParseError> {
+        self.next_token();
+
+        let index = self.parse_expression(Precedence::Lowest)?;
+
+        self.expect_peek(&Token::RBracket)?;
+
+        let expression = Expression::Index {
+            left: Box::new(left),
+            index: Box::new(index),
+        };
 
         Ok(expression)
     }
@@ -668,6 +690,8 @@ mod tests {
     a + add(b * c) + d;
     add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8));
     add(a + b + c * d / f + g);
+    a * [1, 2 ,3, 4][b * c] + d;
+    add(a * b[2], b[1], 2 * [1, 2][1]);
     ";
 
         let mut lexer = Lexer::new(input);
@@ -679,7 +703,7 @@ mod tests {
         }
 
         assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 25);
+        assert_eq!(program.statements.len(), 27);
 
         let tests = [
             "((-a) * b)",
@@ -707,6 +731,8 @@ mod tests {
             "((a + add((b * c))) + d)",
             "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
             "add((((a + b) + ((c * d) / f)) + g))",
+            "((a * ([1, 2, 3, 4][(b * c)])) + d)",
+            "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
         ];
 
         for (statement, test) in program.statements.iter().zip(tests) {
@@ -967,6 +993,24 @@ mod tests {
         assert_eq!(
             program.statements[0].to_string(),
             "[1, (2 * 2), (3 + 3)]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_index_expressions() {
+        let input = "myArray[1 + 1]";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(
+            program.statements[0].to_string(),
+            "(myArray[(1 + 1)])".to_string()
         );
     }
 }

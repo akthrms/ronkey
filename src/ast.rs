@@ -72,6 +72,10 @@ pub enum Expression {
     },
     /// 配列
     Array(Vec<Expression>),
+    Index {
+        left: Box<Expression>,
+        index: Box<Expression>,
+    },
 }
 
 impl fmt::Display for Expression {
@@ -115,6 +119,7 @@ impl fmt::Display for Expression {
                     .join(", ");
                 write!(f, "[{}]", elements)
             }
+            Self::Index { left, index } => write!(f, "({}[{}])", left, index),
         }
     }
 }
