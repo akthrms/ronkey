@@ -177,6 +177,10 @@ impl Environment {
                 let arguments = self.eval_expressions(arguments)?;
                 self.apply_function(function, arguments)?
             }
+            Expression::Array(elements) => {
+                let elements = self.eval_expressions(elements)?;
+                Object::Array(elements)
+            }
             _ => unimplemented!(),
         };
 
@@ -727,6 +731,21 @@ addTwo(2);
                 Response::Reply(result) => assert_eq!(result, expected),
                 _ => unreachable!(),
             }
+        }
+    }
+
+    #[test]
+    fn test_array_expressions() {
+        let input = "[1, 2 * 2, 3 + 3]";
+        let expected = Object::Array(vec![
+            Object::Integer(1),
+            Object::Integer(4),
+            Object::Integer(6),
+        ]);
+
+        match test_eval(input) {
+            Response::Reply(result) => assert_eq!(result, expected),
+            _ => unreachable!(),
         }
     }
 }

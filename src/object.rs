@@ -25,6 +25,8 @@ pub enum Object {
     Buildin {
         function: fn(Vec<Object>) -> EvalResult,
     },
+    /// 配列
+    Array(Vec<Object>),
     /// let文
     Let,
     /// デフォルト
@@ -34,13 +36,19 @@ pub enum Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Integer(value) => write!(f, "{} : Integer", value),
-            Self::Boolean(value) => write!(f, "{} : Boolean", value),
-            Self::Strings(value) => write!(f, "{} : String", value),
-            Self::Null => write!(f, "Null"),
+            Self::Integer(value) => write!(f, "{}", value),
+            Self::Boolean(value) => write!(f, "{}", value),
+            Self::Strings(value) => write!(f, "{}", value),
+            Self::Null => write!(f, "null"),
             Self::Return(object) => write!(f, "{} : {}", object, object.get_type()),
-            Self::Function { .. } => write!(f, "Function"),
-            Self::Buildin { .. } => write!(f, "Buildin Function"),
+            Self::Array(elements) => {
+                let elements = elements
+                    .iter()
+                    .map(Self::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "[{}]", elements)
+            }
             _ => write!(f, ""),
         }
     }
@@ -52,9 +60,10 @@ impl Object {
             Self::Integer(_) => "Integer".to_string(),
             Self::Boolean(_) => "Boolean".to_string(),
             Self::Strings(_) => "String".to_string(),
-            Self::Null => "Null".to_string(),
+            Self::Null => "null".to_string(),
             Self::Function { .. } => "Function".to_string(),
             Self::Buildin { .. } => "Buildin Function".to_string(),
+            Self::Array(_) => "Array".to_string(),
             _ => "".to_string(),
         }
     }
