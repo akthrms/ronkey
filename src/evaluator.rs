@@ -177,6 +177,7 @@ impl Environment {
                 let arguments = self.eval_expressions(arguments)?;
                 self.apply_function(function, arguments)?
             }
+            _ => unimplemented!(),
         };
 
         Ok(result)

@@ -70,6 +70,8 @@ pub enum Expression {
         function: Box<Expression>,
         arguments: Vec<Expression>,
     },
+    /// 配列
+    Array(Vec<Expression>),
 }
 
 impl fmt::Display for Expression {
@@ -104,6 +106,14 @@ impl fmt::Display for Expression {
             } => {
                 let arguments = arguments.iter().map(Self::to_string).collect::<Vec<_>>();
                 write!(f, "{}({})", function, arguments.join(", "))
+            }
+            Self::Array(elements) => {
+                let elements = elements
+                    .iter()
+                    .map(Self::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "[{}]", elements)
             }
         }
     }

@@ -160,6 +160,7 @@ impl<'a> Parser<'a> {
             Token::LParen => self.parse_grouped_expression()?,
             Token::If => self.parse_if_expression()?,
             Token::Function => self.parse_function_expression()?,
+            Token::LBracket => self.parse_array_expression()?,
             _ => {
                 return Err(format!(
                     "no prefix parse function for {} found",
@@ -300,7 +301,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_call_expression(&mut self, function: Expression) -> Result<Expression, ParseError> {
-        let arguments = self.parse_call_arguments()?;
+        let arguments = self.parse_expressions(&Token::RParen)?;
         let expression = Expression::Call {
             function: Box::new(function),
             arguments,
@@ -309,7 +310,7 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParseError> {
+    fn parse_expressions(&mut self, token: &Token) -> Result<Vec<Expression>, ParseError> {
         let mut arguments = vec![];
 
         if self.is_peek_token(&Token::RParen) {
@@ -328,9 +329,16 @@ impl<'a> Parser<'a> {
             arguments.push(self.parse_expression(Precedence::Lowest)?);
         }
 
-        self.expect_peek(&Token::RParen)?;
+        self.expect_peek(token)?;
 
         Ok(arguments)
+    }
+
+    fn parse_array_expression(&mut self) -> Result<Expression, ParseError> {
+        let arguments = self.parse_expressions(&Token::RBracket)?;
+        let expression = Expression::Array(arguments);
+
+        Ok(expression)
     }
 
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
@@ -942,5 +950,23 @@ mod tests {
 
         let string = Expression::Strings("hello world".to_string());
         assert_eq!(program.statements[0], Statement::Expression(string));
+    }
+
+    #[test]
+    fn test_array_expressions() {
+        let input = "[1, 2 * 2, 3 + 3]";
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        assert_eq!(
+            program.statements[0].to_string(),
+            "[1, (2 * 2), (3 + 3)]".to_string()
+        );
     }
 }
