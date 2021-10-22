@@ -379,7 +379,11 @@ impl Environment {
 
     fn eval_index_expression(&mut self, left: Object, index: Object) -> EvalResult {
         match (&left, &index) {
-            (Object::Array(_), Object::Integer(_)) => self.eval_array_index_expression(left, index),
+            (Object::Array(elements), Object::Integer(index)) => {
+                let elements = elements.clone();
+                let index = index.clone();
+                self.eval_array_index_expression(elements, index)
+            }
             _ => {
                 let message = format!("index operator not supported: {}", left.get_type());
                 return Err(message);
@@ -387,18 +391,15 @@ impl Environment {
         }
     }
 
-    fn eval_array_index_expression(&mut self, array: Object, index: Object) -> EvalResult {
-        let result = match (&array, index) {
-            (Object::Array(elements), Object::Integer(index)) => {
-                let max = elements.len() - 1;
+    fn eval_array_index_expression(&mut self, elements: Vec<Object>, index: isize) -> EvalResult {
+        let result = {
+            let max = elements.len() - 1;
 
-                if index < 0 || index > (max as isize) {
-                    Object::Null
-                } else {
-                    elements[index as usize].clone()
-                }
+            if index < 0 || index > (max as isize) {
+                Object::Null
+            } else {
+                elements[index as usize].clone()
             }
-            _ => unreachable!(),
         };
 
         Ok(result)
