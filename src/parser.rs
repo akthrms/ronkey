@@ -346,6 +346,7 @@ impl<'a> Parser<'a> {
     fn parse_array_expression(&mut self) -> Result<Expression, ParseError> {
         let arguments = self.parse_expressions(&Token::RBracket)?;
         let expression = Expression::Array(arguments);
+
         Ok(expression)
     }
 
