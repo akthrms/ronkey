@@ -612,7 +612,7 @@ mod tests {
     }
 
     #[test]
-    fn test_eval_bang_operator() {
+    fn test_eval_bang_prefix_expressions() {
         let tests = vec![
             ("!true", Object::Boolean(false)),
             ("!false", Object::Boolean(true)),
