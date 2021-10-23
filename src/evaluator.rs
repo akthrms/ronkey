@@ -771,20 +771,18 @@ addTwo(2);
 
     #[test]
     fn test_string_expressions() {
-        let input = r#""Hello World!""#;
+        let tests = vec![
+            (
+                r#""Hello World!""#,
+                Object::String("Hello World!".to_string()),
+            ),
+            (
+                r#""Hello" + " " + "World!""#,
+                Object::String("Hello World!".to_string()),
+            ),
+        ];
 
-        let expected = Object::String("Hello World!".to_string());
-
-        assert_object(input, expected);
-    }
-
-    #[test]
-    fn test_string_concatenation() {
-        let input = r#""Hello" + " " + "World!""#;
-
-        let expected = Object::String("Hello World!".to_string());
-
-        assert_object(input, expected);
+        assert_objects(tests);
     }
 
     #[test]
