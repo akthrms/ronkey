@@ -518,10 +518,12 @@ fn is_truthy(object: Object) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::{Expression, Statement};
     use crate::evaluator::{Environment, Response};
     use crate::lexer::Lexer;
     use crate::object::{MapKey, MapPair, Object};
     use crate::parser::Parser;
+    use crate::token::Token;
     use std::collections::BTreeMap;
 
     fn test_eval(input: &str) -> Response {
@@ -532,16 +534,20 @@ mod tests {
         env.eval(program)
     }
 
-    fn assert_object(tests: Vec<(&str, Object)>) {
-        for (input, expected) in tests {
-            match test_eval(input) {
-                Response::Reply(result) => assert_eq!(result, expected),
-                _ => unreachable!(),
-            }
+    fn assert_object(input: &str, expected: Object) {
+        match test_eval(input) {
+            Response::Reply(result) => assert_eq!(result, expected),
+            _ => unreachable!(),
         }
     }
 
-    fn assert_error(tests: Vec<(&str, &str)>) {
+    fn assert_objects(tests: Vec<(&str, Object)>) {
+        for (input, expected) in tests {
+            assert_object(input, expected);
+        }
+    }
+
+    fn assert_errors(tests: Vec<(&str, &str)>) {
         for (input, expected) in tests {
             match test_eval(input) {
                 Response::Error(message) => assert_eq!(message, expected),
@@ -551,7 +557,7 @@ mod tests {
     }
 
     #[test]
-    fn test_eval_integer() {
+    fn test_eval_integer_expressions() {
         let tests = vec![
             ("5", Object::Integer(5)),
             ("10", Object::Integer(10)),
@@ -570,11 +576,11 @@ mod tests {
             ("(5 + 10 * 2 + 15 / 3) * 2 + -10", Object::Integer(50)),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
-    fn test_eval_boolean() {
+    fn test_eval_boolean_expressions() {
         let tests = vec![
             ("true", Object::Boolean(true)),
             ("false", Object::Boolean(false)),
@@ -602,7 +608,7 @@ mod tests {
             ),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
@@ -616,7 +622,7 @@ mod tests {
             ("!!5", Object::Boolean(true)),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
@@ -631,7 +637,7 @@ mod tests {
             ("if (1 < 2) { 10 } else { 20 }", Object::Integer(10)),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
@@ -647,7 +653,7 @@ mod tests {
             ),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
@@ -679,7 +685,7 @@ mod tests {
             ),
         ];
 
-        assert_error(tests);
+        assert_errors(tests);
     }
 
     #[test]
@@ -694,30 +700,33 @@ mod tests {
             ),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
     fn test_function_expressions() {
         let input = "fn(x) { x + 2; };";
 
+        let expected_parameters = vec![Expression::Identifier("x".to_string())];
+        let expected_body = Statement::Block(vec![Statement::Expression(Expression::Infix {
+            left: Box::new(Expression::Identifier("x".to_string())),
+            operator: Token::Plus,
+            right: Box::new(Expression::Integer(2)),
+        })]);
+
         match test_eval(input) {
-            Response::Reply(result) => match result {
-                Object::Function {
-                    parameters, body, ..
-                } => {
-                    assert_eq!(parameters.len(), 1);
-                    assert_eq!(parameters[0].to_string(), "x".to_string());
-                    assert_eq!(body.to_string(), "(x + 2)".to_string());
-                }
-                _ => unreachable!(),
-            },
+            Response::Reply(Object::Function {
+                parameters, body, ..
+            }) => {
+                assert_eq!(parameters, expected_parameters);
+                assert_eq!(body, expected_body);
+            }
             _ => unreachable!(),
         }
     }
 
     #[test]
-    fn test_function_application() {
+    fn test_function_applications() {
         let tests = vec![
             (
                 "let identity = fn(x) { x; }; identity(5);",
@@ -742,7 +751,7 @@ mod tests {
             ("fn(x) { x; }(5)", Object::Integer(5)),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
@@ -757,22 +766,16 @@ addTwo(2);
 
         let expected = Object::Integer(4);
 
-        match test_eval(input) {
-            Response::Reply(result) => assert_eq!(result, expected),
-            _ => unreachable!(),
-        }
+        assert_object(input, expected);
     }
 
     #[test]
-    fn test_string() {
+    fn test_string_expressions() {
         let input = r#""Hello World!""#;
 
         let expected = Object::String("Hello World!".to_string());
 
-        match test_eval(input) {
-            Response::Reply(result) => assert_eq!(result, expected),
-            _ => unreachable!(),
-        }
+        assert_object(input, expected);
     }
 
     #[test]
@@ -781,10 +784,7 @@ addTwo(2);
 
         let expected = Object::String("Hello World!".to_string());
 
-        match test_eval(input) {
-            Response::Reply(result) => assert_eq!(result, expected),
-            _ => unreachable!(),
-        }
+        assert_object(input, expected);
     }
 
     #[test]
@@ -795,22 +795,20 @@ addTwo(2);
             (r#"len("hello world")"#, Object::Integer(11)),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
     fn test_array_expressions() {
         let input = "[1, 2 * 2, 3 + 3]";
+
         let expected = Object::Array(vec![
             Object::Integer(1),
             Object::Integer(4),
             Object::Integer(6),
         ]);
 
-        match test_eval(input) {
-            Response::Reply(result) => assert_eq!(result, expected),
-            _ => unreachable!(),
-        }
+        assert_object(input, expected);
     }
 
     #[test]
@@ -834,7 +832,7 @@ addTwo(2);
             ("[1, 2, 3][-1]", Object::Null),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 
     #[test]
@@ -873,10 +871,7 @@ let two = "two";
 
         let expected = Object::Map(pairs);
 
-        match test_eval(input) {
-            Response::Reply(result) => assert_eq!(result, expected),
-            _ => unreachable!(),
-        }
+        assert_object(input, expected);
     }
 
     #[test]
@@ -891,6 +886,6 @@ let two = "two";
             ("{false: 5}[false]", Object::Integer(5)),
         ];
 
-        assert_object(tests);
+        assert_objects(tests);
     }
 }
