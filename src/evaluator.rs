@@ -1,8 +1,8 @@
 use crate::ast::{Expression, Program, Statement};
 use crate::buildin;
-use crate::object::Object;
+use crate::object::{HashKey, HashPair, Object};
 use crate::token::Token;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// 評価エラー
 pub type EvalError = String;
@@ -21,17 +21,17 @@ pub enum Response {
 }
 
 /// 環境
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Environment {
-    store: HashMap<String, Object>,
+    store: BTreeMap<String, Object>,
     outer: Option<Box<Environment>>,
-    buildin: HashMap<String, Object>,
+    buildin: BTreeMap<String, Object>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Self {
-            store: HashMap::new(),
+            store: BTreeMap::new(),
             outer: None,
             buildin: buildin::new(),
         }
@@ -39,7 +39,7 @@ impl Environment {
 
     fn new_with_outer(env: Box<Environment>) -> Self {
         Self {
-            store: HashMap::new(),
+            store: BTreeMap::new(),
             outer: Some(env),
             buildin: buildin::new(),
         }
@@ -186,7 +186,7 @@ impl Environment {
                 let index = self.eval_expression(index)?;
                 self.eval_index_expression(left, index)?
             }
-            _ => unimplemented!(),
+            Expression::Hash(pairs) => self.eval_hash_expression(pairs)?,
         };
 
         Ok(result)
@@ -402,6 +402,31 @@ impl Environment {
                 elements[index as usize].clone()
             }
         };
+
+        Ok(result)
+    }
+
+    fn eval_hash_expression(&mut self, pairs: &BTreeMap<Expression, Expression>) -> EvalResult {
+        let mut result = BTreeMap::new();
+
+        for (key, value) in pairs {
+            let key = self.eval_expression(key)?;
+            let value = self.eval_expression(value)?;
+
+            let hash_key = match HashKey::from(&key) {
+                HashKey::Unusable => {
+                    let message = format!("unusable as hash key: {}", key.get_type());
+                    return Err(message.to_string());
+                }
+                hash_key => hash_key,
+            };
+
+            let hash_pair = HashPair::new(key, value);
+
+            result.insert(hash_key, hash_pair);
+        }
+
+        let result = Object::Hash(result);
 
         Ok(result)
     }

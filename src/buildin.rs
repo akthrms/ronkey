@@ -1,9 +1,9 @@
 use crate::evaluator::EvalResult;
 use crate::object::Object;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-pub fn new() -> HashMap<String, Object> {
-    let mut buildins = HashMap::new();
+pub fn new() -> BTreeMap<String, Object> {
+    let mut buildins = BTreeMap::new();
 
     buildins.insert("len".to_string(), Object::Buildin { function: len });
     buildins.insert("first".to_string(), Object::Buildin { function: first });

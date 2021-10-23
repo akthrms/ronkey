@@ -1,9 +1,10 @@
 use crate::ast::{Expression, Statement};
 use crate::evaluator::{Environment, EvalResult};
+use std::collections::BTreeMap;
 use std::fmt;
 
 /// オブジェクト
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Object {
     /// 整数
     Integer(isize),
@@ -27,6 +28,8 @@ pub enum Object {
     },
     /// 配列
     Array(Vec<Object>),
+    /// ハッシュ
+    Hash(BTreeMap<HashKey, HashPair>),
     /// let文
     Let,
     /// デフォルト
@@ -49,6 +52,14 @@ impl fmt::Display for Object {
                     .join(", ");
                 write!(f, "[{}]", elements)
             }
+            Self::Hash(pairs) => {
+                let pairs = pairs
+                    .iter()
+                    .map(|(_, pair)| pair.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{{{}}}", pairs)
+            }
             _ => write!(f, ""),
         }
     }
@@ -66,5 +77,44 @@ impl Object {
             Self::Array(_) => "Array".to_string(),
             _ => "".to_string(),
         }
+    }
+}
+
+/// ハッシュキー
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum HashKey {
+    Integer(isize),
+    Boolean(bool),
+    Strings(String),
+    Unusable,
+}
+
+impl From<&Object> for HashKey {
+    fn from(object: &Object) -> Self {
+        match object {
+            Object::Integer(value) => HashKey::Integer(value.clone()),
+            Object::Boolean(value) => HashKey::Boolean(value.clone()),
+            Object::Strings(value) => HashKey::Strings(value.clone()),
+            _ => HashKey::Unusable,
+        }
+    }
+}
+
+/// ハッシュペア
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct HashPair {
+    key: Object,
+    value: Object,
+}
+
+impl HashPair {
+    pub fn new(key: Object, value: Object) -> Self {
+        Self { key, value }
+    }
+}
+
+impl fmt::Display for HashPair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.key, self.value)
     }
 }
