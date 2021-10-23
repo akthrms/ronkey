@@ -39,7 +39,7 @@ pub enum Expression {
     /// 数値
     Integer(isize),
     /// 文字列
-    Strings(String),
+    String(String),
     /// 前置演算子
     Prefix {
         operator: Token,
@@ -55,7 +55,7 @@ pub enum Expression {
     Boolean(bool),
     /// グループ化
     Grouped(Box<Expression>),
-    /// if 式
+    /// if
     If {
         condition: Box<Expression>,
         consequence: Box<Statement>,
@@ -78,8 +78,8 @@ pub enum Expression {
         left: Box<Expression>,
         index: Box<Expression>,
     },
-    /// ハッシュ
-    Hash(BTreeMap<Expression, Expression>),
+    /// マップ
+    Map(BTreeMap<Expression, Expression>),
 }
 
 impl fmt::Display for Expression {
@@ -87,7 +87,7 @@ impl fmt::Display for Expression {
         match self {
             Self::Identifier(value) => write!(f, "{}", value),
             Self::Integer(value) => write!(f, "{}", value),
-            Self::Strings(value) => write!(f, "{}", value),
+            Self::String(value) => write!(f, "{}", value),
             Self::Prefix { operator, right } => write!(f, "({}{})", operator, right),
             Self::Infix {
                 left,
@@ -124,7 +124,7 @@ impl fmt::Display for Expression {
                 write!(f, "[{}]", elements)
             }
             Self::Index { left, index } => write!(f, "({}[{}])", left, index),
-            Self::Hash(pairs) => {
+            Self::Map(pairs) => {
                 let pairs = pairs
                     .iter()
                     .map(|(key, value)| format!("{}: {}", key, value))

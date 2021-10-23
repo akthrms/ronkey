@@ -125,7 +125,7 @@ impl Lexer {
         let int = String::from_iter(&self.input[start_position..self.position]);
 
         match int.parse() {
-            Ok(i) => Token::Int(i),
+            Ok(i) => Token::Integer(i),
             Err(_) => Token::Illegal(self.input[start_position]),
         }
     }
@@ -139,8 +139,8 @@ impl Lexer {
             self.read_char();
         }
 
-        let string = String::from_iter(&self.input[start_position..self.position]);
-        Token::Strings(string)
+        let value = String::from_iter(&self.input[start_position..self.position]);
+        Token::String(value)
     }
 
     fn is_letter(&self) -> bool {
@@ -195,12 +195,12 @@ if (5 < 10) {
             Token::Let,
             Token::Ident("five".to_string()),
             Token::Assign,
-            Token::Int(5),
+            Token::Integer(5),
             Token::Semicolon,
             Token::Let,
             Token::Ident("ten".to_string()),
             Token::Assign,
-            Token::Int(10),
+            Token::Integer(10),
             Token::Semicolon,
             Token::Let,
             Token::Ident("add".to_string()),
@@ -232,19 +232,19 @@ if (5 < 10) {
             Token::Minus,
             Token::Slash,
             Token::Asterisk,
-            Token::Int(5),
+            Token::Integer(5),
             Token::Semicolon,
-            Token::Int(5),
+            Token::Integer(5),
             Token::Lt,
-            Token::Int(10),
+            Token::Integer(10),
             Token::Gt,
-            Token::Int(5),
+            Token::Integer(5),
             Token::Semicolon,
             Token::If,
             Token::LParen,
-            Token::Int(5),
+            Token::Integer(5),
             Token::Lt,
-            Token::Int(10),
+            Token::Integer(10),
             Token::RParen,
             Token::LBrace,
             Token::Return,
@@ -257,28 +257,28 @@ if (5 < 10) {
             Token::False,
             Token::Semicolon,
             Token::RBrace,
-            Token::Int(10),
+            Token::Integer(10),
             Token::Eq,
-            Token::Int(10),
+            Token::Integer(10),
             Token::Semicolon,
-            Token::Int(10),
+            Token::Integer(10),
             Token::Ne,
-            Token::Int(9),
+            Token::Integer(9),
             Token::Semicolon,
-            Token::Strings("foobar".to_string()),
+            Token::String("foobar".to_string()),
             Token::Semicolon,
-            Token::Strings("foo bar".to_string()),
+            Token::String("foo bar".to_string()),
             Token::Semicolon,
             Token::LBracket,
-            Token::Int(1),
+            Token::Integer(1),
             Token::Comma,
-            Token::Int(2),
+            Token::Integer(2),
             Token::RBracket,
             Token::Semicolon,
             Token::LBrace,
-            Token::Strings("foo".to_string()),
+            Token::String("foo".to_string()),
             Token::Colon,
-            Token::Strings("bar".to_string()),
+            Token::String("bar".to_string()),
             Token::RBrace,
             Token::Semicolon,
             Token::Eof,

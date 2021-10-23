@@ -156,8 +156,8 @@ impl<'a> Parser<'a> {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
         let mut expression = match &self.current_token {
             Token::Ident(value) => Expression::Identifier(value.clone()),
-            Token::Int(value) => Expression::Integer(value.clone()),
-            Token::Strings(value) => Expression::Strings(value.clone()),
+            Token::Integer(value) => Expression::Integer(value.clone()),
+            Token::String(value) => Expression::String(value.clone()),
             Token::Bang | Token::Minus => self.parse_prefix_expression()?,
             Token::True => Expression::Boolean(true),
             Token::False => Expression::Boolean(false),
@@ -165,7 +165,7 @@ impl<'a> Parser<'a> {
             Token::If => self.parse_if_expression()?,
             Token::Function => self.parse_function_expression()?,
             Token::LBracket => self.parse_array_expression()?,
-            Token::LBrace => self.parse_hash_expression()?,
+            Token::LBrace => self.parse_map_expression()?,
             _ => {
                 return Err(format!(
                     "no prefix parse function for {} found",
@@ -346,7 +346,6 @@ impl<'a> Parser<'a> {
     fn parse_array_expression(&mut self) -> Result<Expression, ParseError> {
         let arguments = self.parse_expressions(&Token::RBracket)?;
         let expression = Expression::Array(arguments);
-
         Ok(expression)
     }
 
@@ -365,8 +364,8 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    fn parse_hash_expression(&mut self) -> Result<Expression, ParseError> {
-        let mut map = BTreeMap::new();
+    fn parse_map_expression(&mut self) -> Result<Expression, ParseError> {
+        let mut pairs = BTreeMap::new();
 
         while !self.is_peek_token(&Token::RBrace) {
             self.next_token();
@@ -378,7 +377,7 @@ impl<'a> Parser<'a> {
 
             let value = self.parse_expression(Precedence::Lowest)?;
 
-            map.insert(key, value);
+            pairs.insert(key, value);
 
             if !self.is_peek_token(&Token::RBrace) {
                 self.expect_peek(&Token::Comma)?;
@@ -387,7 +386,7 @@ impl<'a> Parser<'a> {
 
         self.expect_peek(&Token::RBrace)?;
 
-        let expression = Expression::Hash(map);
+        let expression = Expression::Map(pairs);
 
         Ok(expression)
     }
@@ -404,6 +403,7 @@ impl<'a> Parser<'a> {
         };
 
         self.next_token();
+
         Ok(value)
     }
 
@@ -422,7 +422,7 @@ impl<'a> Parser<'a> {
     fn is_current_token(&mut self, token: &Token) -> bool {
         match (&self.current_token, token) {
             (Token::Ident(_), Token::Ident(_)) => true,
-            (Token::Int(_), Token::Int(_)) => true,
+            (Token::Integer(_), Token::Integer(_)) => true,
             _ => &self.current_token == token,
         }
     }
@@ -430,7 +430,7 @@ impl<'a> Parser<'a> {
     fn is_peek_token(&mut self, token: &Token) -> bool {
         match (&self.peek_token, token) {
             (Token::Ident(_), Token::Ident(_)) => true,
-            (Token::Int(_), Token::Int(_)) => true,
+            (Token::Integer(_), Token::Integer(_)) => true,
             _ => &self.peek_token == token,
         }
     }
@@ -1004,8 +1004,8 @@ mod tests {
             println!("{}", error);
         }
 
-        let string = Expression::Strings("hello world".to_string());
-        assert_eq!(program.statements[0], Statement::Expression(string));
+        let expression = Expression::String("hello world".to_string());
+        assert_eq!(program.statements[0], Statement::Expression(expression));
     }
 
     #[test]
@@ -1050,31 +1050,31 @@ mod tests {
                 let mut map = BTreeMap::new();
 
                 map.insert(
-                    Expression::Strings("one".to_string()),
+                    Expression::String("one".to_string()),
                     Expression::Integer(1),
                 );
                 map.insert(
-                    Expression::Strings("two".to_string()),
+                    Expression::String("two".to_string()),
                     Expression::Integer(2),
                 );
                 map.insert(
-                    Expression::Strings("three".to_string()),
+                    Expression::String("three".to_string()),
                     Expression::Integer(3),
                 );
 
-                let expression = Expression::Hash(map);
+                let expression = Expression::Map(map);
                 Statement::Expression(expression)
             }),
             (r#"{}"#, {
                 let map = BTreeMap::new();
-                let expression = Expression::Hash(map);
+                let expression = Expression::Map(map);
                 Statement::Expression(expression)
             }),
             (r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#, {
                 let mut map = BTreeMap::new();
 
                 map.insert(
-                    Expression::Strings("one".to_string()),
+                    Expression::String("one".to_string()),
                     Expression::Infix {
                         left: Box::new(Expression::Integer(0)),
                         operator: Token::Plus,
@@ -1082,7 +1082,7 @@ mod tests {
                     },
                 );
                 map.insert(
-                    Expression::Strings("two".to_string()),
+                    Expression::String("two".to_string()),
                     Expression::Infix {
                         left: Box::new(Expression::Integer(10)),
                         operator: Token::Minus,
@@ -1090,7 +1090,7 @@ mod tests {
                     },
                 );
                 map.insert(
-                    Expression::Strings("three".to_string()),
+                    Expression::String("three".to_string()),
                     Expression::Infix {
                         left: Box::new(Expression::Integer(15)),
                         operator: Token::Slash,
@@ -1098,7 +1098,7 @@ mod tests {
                     },
                 );
 
-                let expression = Expression::Hash(map);
+                let expression = Expression::Map(map);
                 Statement::Expression(expression)
             }),
         ];

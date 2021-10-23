@@ -11,10 +11,10 @@ pub enum Object {
     /// 真偽値
     Boolean(bool),
     /// 文字列
-    Strings(String),
+    String(String),
     /// null
     Null,
-    /// return文
+    /// return
     Return(Box<Object>),
     /// 関数
     Function {
@@ -28,9 +28,9 @@ pub enum Object {
     },
     /// 配列
     Array(Vec<Object>),
-    /// ハッシュ
-    Hash(BTreeMap<HashKey, HashPair>),
-    /// let文
+    /// マップ
+    Map(BTreeMap<MapKey, MapPair>),
+    /// let
     Let,
     /// デフォルト
     Default,
@@ -41,7 +41,7 @@ impl fmt::Display for Object {
         match self {
             Self::Integer(value) => write!(f, "{}", value),
             Self::Boolean(value) => write!(f, "{}", value),
-            Self::Strings(value) => write!(f, "{}", value),
+            Self::String(value) => write!(f, "{}", value),
             Self::Null => write!(f, "null"),
             Self::Return(object) => write!(f, "{}", object),
             Self::Array(elements) => {
@@ -52,7 +52,7 @@ impl fmt::Display for Object {
                     .join(", ");
                 write!(f, "[{}]", elements)
             }
-            Self::Hash(pairs) => {
+            Self::Map(pairs) => {
                 let pairs = pairs
                     .iter()
                     .map(|(_, pair)| pair.to_string())
@@ -70,7 +70,7 @@ impl Object {
         match self {
             Self::Integer(_) => "Integer".to_string(),
             Self::Boolean(_) => "Boolean".to_string(),
-            Self::Strings(_) => "String".to_string(),
+            Self::String(_) => "String".to_string(),
             Self::Null => "null".to_string(),
             Self::Function { .. } => "Function".to_string(),
             Self::Buildin { .. } => "Buildin Function".to_string(),
@@ -80,40 +80,40 @@ impl Object {
     }
 }
 
-/// ハッシュキー
+/// マップのキー
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum HashKey {
+pub enum MapKey {
     Integer(isize),
     Boolean(bool),
-    Strings(String),
+    String(String),
     Unusable,
 }
 
-impl From<&Object> for HashKey {
+impl From<&Object> for MapKey {
     fn from(object: &Object) -> Self {
         match object {
-            Object::Integer(value) => HashKey::Integer(value.clone()),
-            Object::Boolean(value) => HashKey::Boolean(value.clone()),
-            Object::Strings(value) => HashKey::Strings(value.clone()),
-            _ => HashKey::Unusable,
+            Object::Integer(value) => MapKey::Integer(value.clone()),
+            Object::Boolean(value) => MapKey::Boolean(value.clone()),
+            Object::String(value) => MapKey::String(value.clone()),
+            _ => MapKey::Unusable,
         }
     }
 }
 
-/// ハッシュペア
+/// マップの値
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct HashPair {
+pub struct MapPair {
     pub key: Object,
     pub value: Object,
 }
 
-impl HashPair {
+impl MapPair {
     pub fn new(key: Object, value: Object) -> Self {
         Self { key, value }
     }
 }
 
-impl fmt::Display for HashPair {
+impl fmt::Display for MapPair {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.key, self.value)
     }
@@ -121,14 +121,14 @@ impl fmt::Display for HashPair {
 
 #[cfg(test)]
 mod tests {
-    use crate::object::HashKey;
+    use crate::object::MapKey;
 
     #[test]
-    fn test_string_hash_key() {
-        let hello1 = HashKey::Strings("Hello World".to_string());
-        let hello2 = HashKey::Strings("Hello World".to_string());
-        let diff1 = HashKey::Strings("My name is johnny".to_string());
-        let diff2 = HashKey::Strings("My name is johnny".to_string());
+    fn test_string_map_key() {
+        let hello1 = MapKey::String("Hello World".to_string());
+        let hello2 = MapKey::String("Hello World".to_string());
+        let diff1 = MapKey::String("My name is johnny".to_string());
+        let diff2 = MapKey::String("My name is johnny".to_string());
 
         assert!(hello1 == hello2);
         assert!(diff1 == diff2);

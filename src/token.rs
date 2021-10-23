@@ -11,9 +11,9 @@ pub enum Token {
     /// 識別子
     Ident(String),
     /// 数値
-    Int(isize),
+    Integer(isize),
     /// 文字列
-    Strings(String),
+    String(String),
 
     // 演算子
     /// =
@@ -80,8 +80,8 @@ impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Token::Ident(value) => write!(f, "{}", value),
-            Token::Int(value) => write!(f, "Int({})", value),
-            Token::Strings(value) => write!(f, "String({})", value),
+            Token::Integer(value) => write!(f, "Int({})", value),
+            Token::String(value) => write!(f, "String({})", value),
             Token::Assign => write!(f, "="),
             Token::Plus => write!(f, "+"),
             Token::Minus => write!(f, "-"),

@@ -1,6 +1,6 @@
 use crate::ast::{Expression, Program, Statement};
 use crate::buildin;
-use crate::object::{HashKey, HashPair, Object};
+use crate::object::{MapKey, MapPair, Object};
 use crate::token::Token;
 use std::collections::BTreeMap;
 
@@ -139,9 +139,9 @@ impl Environment {
                 let value = *value;
                 Object::Boolean(value)
             }
-            Expression::Strings(value) => {
+            Expression::String(value) => {
                 let value = value.to_string();
-                Object::Strings(value)
+                Object::String(value)
             }
             Expression::Prefix { operator, right } => {
                 let right = self.eval_expression(right)?;
@@ -186,7 +186,7 @@ impl Environment {
                 let index = self.eval_expression(index)?;
                 self.eval_index_expression(left, index)?
             }
-            Expression::Hash(pairs) => self.eval_hash_expression(pairs)?,
+            Expression::Map(pairs) => self.eval_hash_expression(pairs)?,
         };
 
         Ok(result)
@@ -249,7 +249,7 @@ impl Environment {
                 let right = *right;
                 self.eval_boolean_infix_expression(left, operator, right)?
             }
-            (Object::Strings(left), Object::Strings(right)) => {
+            (Object::String(left), Object::String(right)) => {
                 let left = left.to_string();
                 let right = right.to_string();
                 self.eval_string_infix_expression(left, operator, right)?
@@ -314,7 +314,7 @@ impl Environment {
         right: String,
     ) -> EvalResult {
         let result = match operator {
-            Token::Plus => Object::Strings(format!("{}{}", left, right)),
+            Token::Plus => Object::String(format!("{}{}", left, right)),
             Token::Eq => Object::Boolean(left == right),
             Token::Ne => Object::Boolean(left != right),
             _ => {
@@ -385,7 +385,7 @@ impl Environment {
                 let index = index.clone();
                 self.eval_array_index_expression(elements, index)
             }
-            (Object::Hash(pairs), _) => {
+            (Object::Map(pairs), _) => {
                 let pairs = pairs.clone();
                 self.eval_hash_index_expression(pairs, index)
             }
@@ -412,11 +412,11 @@ impl Environment {
 
     fn eval_hash_index_expression(
         &mut self,
-        pairs: BTreeMap<HashKey, HashPair>,
+        pairs: BTreeMap<MapKey, MapPair>,
         index: Object,
     ) -> EvalResult {
-        let hash_key = match HashKey::from(&index) {
-            HashKey::Unusable => {
+        let hash_key = match MapKey::from(&index) {
+            MapKey::Unusable => {
                 let message = format!("unusable as hash key: {}", index.get_type());
                 return Err(message.to_string());
             }
@@ -424,7 +424,7 @@ impl Environment {
         };
 
         let result = match pairs.get(&hash_key) {
-            Some(HashPair { value, .. }) => value.clone(),
+            Some(MapPair { value, .. }) => value.clone(),
             None => Object::Null,
         };
 
@@ -438,20 +438,20 @@ impl Environment {
             let key = self.eval_expression(key)?;
             let value = self.eval_expression(value)?;
 
-            let hash_key = match HashKey::from(&key) {
-                HashKey::Unusable => {
+            let hash_key = match MapKey::from(&key) {
+                MapKey::Unusable => {
                     let message = format!("unusable as hash key: {}", key.get_type());
                     return Err(message.to_string());
                 }
                 hash_key => hash_key,
             };
 
-            let hash_pair = HashPair::new(key, value);
+            let hash_pair = MapPair::new(key, value);
 
             pairs_result.insert(hash_key, hash_pair);
         }
 
-        let result = Object::Hash(pairs_result);
+        let result = Object::Map(pairs_result);
 
         Ok(result)
     }
@@ -517,7 +517,7 @@ fn is_truthy(object: Object) -> bool {
 mod tests {
     use crate::evaluator::{Environment, Response};
     use crate::lexer::Lexer;
-    use crate::object::{HashKey, HashPair, Object};
+    use crate::object::{MapKey, MapPair, Object};
     use crate::parser::Parser;
     use std::collections::BTreeMap;
 
@@ -786,7 +786,7 @@ addTwo(2);
     fn test_string() {
         let input = r#""Hello World!""#;
 
-        let expected = Object::Strings("Hello World!".to_string());
+        let expected = Object::String("Hello World!".to_string());
 
         match test_eval(input) {
             Response::Reply(result) => assert_eq!(result, expected),
@@ -798,7 +798,7 @@ addTwo(2);
     fn test_string_concatenation() {
         let input = r#""Hello" + " " + "World!""#;
 
-        let expected = Object::Strings("Hello World!".to_string());
+        let expected = Object::String("Hello World!".to_string());
 
         match test_eval(input) {
             Response::Reply(result) => assert_eq!(result, expected),
@@ -876,31 +876,31 @@ let two = "two";
         let mut pairs = BTreeMap::new();
 
         pairs.insert(
-            HashKey::Strings("one".to_string()),
-            HashPair::new(Object::Strings("one".to_string()), Object::Integer(1)),
+            MapKey::String("one".to_string()),
+            MapPair::new(Object::String("one".to_string()), Object::Integer(1)),
         );
         pairs.insert(
-            HashKey::Strings("two".to_string()),
-            HashPair::new(Object::Strings("two".to_string()), Object::Integer(2)),
+            MapKey::String("two".to_string()),
+            MapPair::new(Object::String("two".to_string()), Object::Integer(2)),
         );
         pairs.insert(
-            HashKey::Strings("three".to_string()),
-            HashPair::new(Object::Strings("three".to_string()), Object::Integer(3)),
+            MapKey::String("three".to_string()),
+            MapPair::new(Object::String("three".to_string()), Object::Integer(3)),
         );
         pairs.insert(
-            HashKey::Integer(4),
-            HashPair::new(Object::Integer(4), Object::Integer(4)),
+            MapKey::Integer(4),
+            MapPair::new(Object::Integer(4), Object::Integer(4)),
         );
         pairs.insert(
-            HashKey::Boolean(true),
-            HashPair::new(Object::Boolean(true), Object::Integer(5)),
+            MapKey::Boolean(true),
+            MapPair::new(Object::Boolean(true), Object::Integer(5)),
         );
         pairs.insert(
-            HashKey::Boolean(false),
-            HashPair::new(Object::Boolean(false), Object::Integer(6)),
+            MapKey::Boolean(false),
+            MapPair::new(Object::Boolean(false), Object::Integer(6)),
         );
 
-        let expected = Object::Hash(pairs);
+        let expected = Object::Map(pairs);
 
         match test_eval(input) {
             Response::Reply(result) => assert_eq!(result, expected),
