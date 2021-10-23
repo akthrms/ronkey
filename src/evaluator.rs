@@ -407,7 +407,7 @@ impl Environment {
     }
 
     fn eval_hash_expression(&mut self, pairs: &BTreeMap<Expression, Expression>) -> EvalResult {
-        let mut result = BTreeMap::new();
+        let mut map = BTreeMap::new();
 
         for (key, value) in pairs {
             let key = self.eval_expression(key)?;
@@ -423,10 +423,10 @@ impl Environment {
 
             let hash_pair = HashPair::new(key, value);
 
-            result.insert(hash_key, hash_pair);
+            map.insert(hash_key, hash_pair);
         }
 
-        let result = Object::Hash(result);
+        let result = Object::Hash(map);
 
         Ok(result)
     }
