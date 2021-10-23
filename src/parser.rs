@@ -320,7 +320,7 @@ impl<'a> Parser<'a> {
     fn parse_expressions(&mut self, token: &Token) -> Result<Vec<Expression>, ParseError> {
         let mut arguments = vec![];
 
-        if self.is_peek_token(&Token::RParen) {
+        if self.is_peek_token(token) {
             self.next_token();
             return Ok(arguments);
         }
@@ -980,20 +980,19 @@ mod tests {
 
     #[test]
     fn test_array_expressions() {
-        let input = "[1, 2 * 2, 3 + 3]";
+        let tests = [("[1, 2 * 2, 3 + 3]", "[1, (2 * 2), (3 + 3)]"), ("[]", "[]")];
 
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
+        for (input, expected) in tests {
+            let mut lexer = Lexer::new(input);
+            let mut parser = Parser::new(&mut lexer);
+            let program = parser.parse_program();
 
-        for error in parser.errors.iter() {
-            println!("{}", error);
+            for error in parser.errors.iter() {
+                println!("{}", error);
+            }
+
+            assert_eq!(program.statements[0].to_string(), expected)
         }
-
-        assert_eq!(
-            program.statements[0].to_string(),
-            "[1, (2 * 2), (3 + 3)]".to_string()
-        );
     }
 
     #[test]
