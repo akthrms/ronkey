@@ -62,6 +62,7 @@ impl Lexer {
             '>' => Token::Gt,
             ',' => Token::Comma,
             ';' => Token::Semicolon,
+            ':' => Token::Colon,
             '(' => Token::LParen,
             ')' => Token::RParen,
             '{' => Token::LBrace,
@@ -187,6 +188,7 @@ if (5 < 10) {
 "foobar";
 "foo bar";
 [1, 2];
+{"foo": "bar"};
 "#;
 
         let tests = [
@@ -272,6 +274,12 @@ if (5 < 10) {
             Token::Comma,
             Token::Int(2),
             Token::RBracket,
+            Token::Semicolon,
+            Token::LBrace,
+            Token::Strings("foo".to_string()),
+            Token::Colon,
+            Token::Strings("bar".to_string()),
+            Token::RBrace,
             Token::Semicolon,
             Token::Eof,
         ];

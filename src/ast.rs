@@ -1,4 +1,5 @@
 use crate::token::Token;
+use std::collections::BTreeMap;
 use std::fmt;
 
 /// 文
@@ -72,10 +73,13 @@ pub enum Expression {
     },
     /// 配列
     Array(Vec<Expression>),
+    /// インデックス
     Index {
         left: Box<Expression>,
         index: Box<Expression>,
     },
+    /// ハッシュ
+    Hash(BTreeMap<Expression, Expression>),
 }
 
 impl fmt::Display for Expression {
@@ -120,6 +124,14 @@ impl fmt::Display for Expression {
                 write!(f, "[{}]", elements)
             }
             Self::Index { left, index } => write!(f, "({}[{}])", left, index),
+            Self::Hash(pairs) => {
+                let pairs = pairs
+                    .iter()
+                    .map(|(key, value)| format!("{}: {}", key, value))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{{{}}}", pairs)
+            }
         }
     }
 }

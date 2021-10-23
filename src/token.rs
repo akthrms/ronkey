@@ -43,6 +43,8 @@ pub enum Token {
     Comma,
     /// ;
     Semicolon,
+    /// :
+    Colon,
 
     /// (
     LParen,
@@ -92,6 +94,7 @@ impl fmt::Display for Token {
             Token::Ne => write!(f, "!="),
             Token::Comma => write!(f, ","),
             Token::Semicolon => write!(f, ";"),
+            Token::Colon => write!(f, ":"),
             Token::LParen => write!(f, "("),
             Token::RParen => write!(f, ")"),
             Token::LBrace => write!(f, "{{"),

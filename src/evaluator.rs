@@ -186,6 +186,7 @@ impl Environment {
                 let index = self.eval_expression(index)?;
                 self.eval_index_expression(left, index)?
             }
+            _ => unimplemented!(),
         };
 
         Ok(result)

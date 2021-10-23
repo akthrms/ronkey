@@ -1,6 +1,7 @@
 use crate::ast::{Expression, Program, Statement};
 use crate::lexer::Lexer;
 use crate::token::Token;
+use std::collections::BTreeMap;
 
 /// 構文解析エラー
 type ParseError = String;
@@ -164,6 +165,7 @@ impl<'a> Parser<'a> {
             Token::If => self.parse_if_expression()?,
             Token::Function => self.parse_function_expression()?,
             Token::LBracket => self.parse_array_expression()?,
+            Token::LBrace => self.parse_hash_expression()?,
             _ => {
                 return Err(format!(
                     "no prefix parse function for {} found",
@@ -363,6 +365,31 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
+    fn parse_hash_expression(&mut self) -> Result<Expression, ParseError> {
+        let mut map = BTreeMap::new();
+
+        while !self.is_peek_token(&Token::RBrace) {
+            self.next_token();
+
+            let key = self.parse_expression(Precedence::Lowest)?;
+
+            self.expect_peek(&Token::Colon)?;
+            self.next_token();
+
+            let value = self.parse_expression(Precedence::Lowest)?;
+
+            map.insert(key, value);
+
+            if !self.is_peek_token(&Token::RBrace) {
+                self.expect_peek(&Token::Comma)?;
+            }
+        }
+
+        let expression = Expression::Hash(map);
+
+        Ok(expression)
+    }
+
     fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
         let value = match &self.peek_token {
             Token::Ident(value) => value.to_string(),
@@ -413,6 +440,7 @@ mod tests {
     use crate::lexer::Lexer;
     use crate::parser::Parser;
     use crate::token::Token;
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_let_statements() {
@@ -1011,5 +1039,99 @@ mod tests {
             program.statements[0].to_string(),
             "(myArray[(1 + 1)])".to_string()
         );
+    }
+
+    #[test]
+    fn test_hash_expressions() {
+        let input = r#"{"one": 1, "two": 2, "three": 3}"#;
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        let mut map = BTreeMap::new();
+
+        map.insert(
+            Expression::Strings("one".to_string()),
+            Expression::Integer(1),
+        );
+        map.insert(
+            Expression::Strings("two".to_string()),
+            Expression::Integer(2),
+        );
+        map.insert(
+            Expression::Strings("three".to_string()),
+            Expression::Integer(3),
+        );
+
+        let expression = Expression::Hash(map);
+
+        assert_eq!(program.statements[0], Statement::Expression(expression));
+    }
+
+    #[test]
+    fn test_empty_hash_expressions() {
+        let input = r#"{}"#;
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        let map = BTreeMap::new();
+        let expression = Expression::Hash(map);
+
+        assert_eq!(program.statements[0], Statement::Expression(expression));
+    }
+
+    #[test]
+    fn test_hash_with_infix_expressions() {
+        let input = r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
+
+        let mut lexer = Lexer::new(input);
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        for error in parser.errors.iter() {
+            println!("{}", error);
+        }
+
+        let mut map = BTreeMap::new();
+
+        map.insert(
+            Expression::Strings("one".to_string()),
+            Expression::Infix {
+                left: Box::new(Expression::Integer(0)),
+                operator: Token::Plus,
+                right: Box::new(Expression::Integer(1)),
+            },
+        );
+        map.insert(
+            Expression::Strings("two".to_string()),
+            Expression::Infix {
+                left: Box::new(Expression::Integer(10)),
+                operator: Token::Minus,
+                right: Box::new(Expression::Integer(8)),
+            },
+        );
+        map.insert(
+            Expression::Strings("three".to_string()),
+            Expression::Infix {
+                left: Box::new(Expression::Integer(15)),
+                operator: Token::Slash,
+                right: Box::new(Expression::Integer(5)),
+            },
+        );
+
+        let expression = Expression::Hash(map);
+
+        assert_eq!(program.statements[0], Statement::Expression(expression));
     }
 }
