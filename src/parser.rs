@@ -385,6 +385,8 @@ impl<'a> Parser<'a> {
             }
         }
 
+        self.expect_peek(&Token::RBrace)?;
+
         let expression = Expression::Hash(map);
 
         Ok(expression)
