@@ -103,8 +103,8 @@ impl From<&Object> for HashKey {
 /// ハッシュペア
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct HashPair {
-    key: Object,
-    value: Object,
+    pub key: Object,
+    pub value: Object,
 }
 
 impl HashPair {

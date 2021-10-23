@@ -385,6 +385,10 @@ impl Environment {
                 let index = index.clone();
                 self.eval_array_index_expression(elements, index)
             }
+            (Object::Hash(pairs), _) => {
+                let pairs = pairs.clone();
+                self.eval_hash_index_expression(pairs, index)
+            }
             _ => {
                 let message = format!("index operator not supported: {}", left.get_type());
                 return Err(message);
@@ -401,6 +405,27 @@ impl Environment {
             } else {
                 elements[index as usize].clone()
             }
+        };
+
+        Ok(result)
+    }
+
+    fn eval_hash_index_expression(
+        &mut self,
+        pairs: BTreeMap<HashKey, HashPair>,
+        index: Object,
+    ) -> EvalResult {
+        let hash_key = match HashKey::from(&index) {
+            HashKey::Unusable => {
+                let message = format!("unusable as hash key: {}", index.get_type());
+                return Err(message.to_string());
+            }
+            hash_key => hash_key,
+        };
+
+        let result = match pairs.get(&hash_key) {
+            Some(HashPair { value, .. }) => value.clone(),
+            None => Object::Null,
         };
 
         Ok(result)
@@ -652,6 +677,10 @@ mod tests {
                 r#"len("one", "two")"#,
                 "wrong number of arguments. got=2, want=1",
             ),
+            (
+                r#"{"name": "Monkey"}[fn(x) { x }]"#,
+                "unusable as hash key: Function",
+            ),
         ];
 
         for (input, expected) in tests {
@@ -876,6 +905,26 @@ let two = "two";
         match test_eval(input) {
             Response::Reply(result) => assert_eq!(result, expected),
             _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_hash_index_expressions() {
+        let tests = [
+            (r#"{"foo": 5}["foo"]"#, Object::Integer(5)),
+            (r#"{"foo": 5}["bar"]"#, Object::Null),
+            (r#"let key = "foo"; {"foo": 5}[key]"#, Object::Integer(5)),
+            (r#"{}["foo"]"#, Object::Null),
+            (r#"{5: 5}[5]"#, Object::Integer(5)),
+            (r#"{true: 5}[true]"#, Object::Integer(5)),
+            (r#"{false: 5}[false]"#, Object::Integer(5)),
+        ];
+
+        for (input, expected) in tests {
+            match test_eval(input) {
+                Response::Reply(result) => assert_eq!(result, expected),
+                _ => unreachable!(),
+            }
         }
     }
 }

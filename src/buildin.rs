@@ -10,6 +10,7 @@ pub fn new() -> BTreeMap<String, Object> {
     buildins.insert("last".to_string(), Object::Buildin { function: last });
     buildins.insert("rest".to_string(), Object::Buildin { function: rest });
     buildins.insert("push".to_string(), Object::Buildin { function: push });
+    buildins.insert("puts".to_string(), Object::Buildin { function: puts });
 
     buildins
 }
@@ -118,6 +119,16 @@ fn push(arguments: Vec<Object>) -> EvalResult {
             return Err(message);
         }
     };
+
+    Ok(result)
+}
+
+fn puts(arguments: Vec<Object>) -> EvalResult {
+    for argument in arguments.iter() {
+        println!("{}", argument);
+    }
+
+    let result = Object::Null;
 
     Ok(result)
 }
