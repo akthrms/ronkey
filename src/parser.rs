@@ -1045,95 +1045,76 @@ mod tests {
 
     #[test]
     fn test_hash_expressions() {
-        let input = r#"{"one": 1, "two": 2, "three": 3}"#;
+        let tests = [
+            (r#"{"one": 1, "two": 2, "three": 3}"#, {
+                let mut map = BTreeMap::new();
 
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
+                map.insert(
+                    Expression::Strings("one".to_string()),
+                    Expression::Integer(1),
+                );
+                map.insert(
+                    Expression::Strings("two".to_string()),
+                    Expression::Integer(2),
+                );
+                map.insert(
+                    Expression::Strings("three".to_string()),
+                    Expression::Integer(3),
+                );
 
-        for error in parser.errors.iter() {
-            println!("{}", error);
+                let expression = Expression::Hash(map);
+                Statement::Expression(expression)
+            }),
+            (r#"{}"#, {
+                let map = BTreeMap::new();
+                let expression = Expression::Hash(map);
+                Statement::Expression(expression)
+            }),
+            (r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#, {
+                let mut map = BTreeMap::new();
+
+                map.insert(
+                    Expression::Strings("one".to_string()),
+                    Expression::Infix {
+                        left: Box::new(Expression::Integer(0)),
+                        operator: Token::Plus,
+                        right: Box::new(Expression::Integer(1)),
+                    },
+                );
+                map.insert(
+                    Expression::Strings("two".to_string()),
+                    Expression::Infix {
+                        left: Box::new(Expression::Integer(10)),
+                        operator: Token::Minus,
+                        right: Box::new(Expression::Integer(8)),
+                    },
+                );
+                map.insert(
+                    Expression::Strings("three".to_string()),
+                    Expression::Infix {
+                        left: Box::new(Expression::Integer(15)),
+                        operator: Token::Slash,
+                        right: Box::new(Expression::Integer(5)),
+                    },
+                );
+
+                let expression = Expression::Hash(map);
+                Statement::Expression(expression)
+            }),
+        ];
+
+        for (input, expected) in tests {
+            let mut lexer = Lexer::new(input);
+            let mut parser = Parser::new(&mut lexer);
+            let program = parser.parse_program();
+
+            for error in parser.errors.iter() {
+                println!("{}", error);
+            }
+
+            for statement in program.statements {
+                assert_eq!(statement, expected);
+            }
         }
-
-        let mut map = BTreeMap::new();
-
-        map.insert(
-            Expression::Strings("one".to_string()),
-            Expression::Integer(1),
-        );
-        map.insert(
-            Expression::Strings("two".to_string()),
-            Expression::Integer(2),
-        );
-        map.insert(
-            Expression::Strings("three".to_string()),
-            Expression::Integer(3),
-        );
-
-        let expression = Expression::Hash(map);
-
-        assert_eq!(program.statements[0], Statement::Expression(expression));
-    }
-
-    #[test]
-    fn test_empty_hash_expressions() {
-        let input = r#"{}"#;
-
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        let map = BTreeMap::new();
-        let expression = Expression::Hash(map);
-
-        assert_eq!(program.statements[0], Statement::Expression(expression));
-    }
-
-    #[test]
-    fn test_hash_with_infix_expressions() {
-        let input = r#"{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
-
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        let mut map = BTreeMap::new();
-
-        map.insert(
-            Expression::Strings("one".to_string()),
-            Expression::Infix {
-                left: Box::new(Expression::Integer(0)),
-                operator: Token::Plus,
-                right: Box::new(Expression::Integer(1)),
-            },
-        );
-        map.insert(
-            Expression::Strings("two".to_string()),
-            Expression::Infix {
-                left: Box::new(Expression::Integer(10)),
-                operator: Token::Minus,
-                right: Box::new(Expression::Integer(8)),
-            },
-        );
-        map.insert(
-            Expression::Strings("three".to_string()),
-            Expression::Infix {
-                left: Box::new(Expression::Integer(15)),
-                operator: Token::Slash,
-                right: Box::new(Expression::Integer(5)),
-            },
-        );
-
-        let expression = Expression::Hash(map);
-
-        assert_eq!(program.statements[0], Statement::Expression(expression));
     }
 }
