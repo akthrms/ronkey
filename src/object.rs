@@ -118,3 +118,20 @@ impl fmt::Display for HashPair {
         write!(f, "{}: {}", self.key, self.value)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::object::HashKey;
+
+    #[test]
+    fn test_string_hash_key() {
+        let hello1 = HashKey::Strings("Hello World".to_string());
+        let hello2 = HashKey::Strings("Hello World".to_string());
+        let diff1 = HashKey::Strings("My name is johnny".to_string());
+        let diff2 = HashKey::Strings("My name is johnny".to_string());
+
+        assert!(hello1 == hello2);
+        assert!(diff1 == diff2);
+        assert!(hello1 != diff2);
+    }
+}
