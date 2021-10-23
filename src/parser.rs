@@ -1045,7 +1045,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hash_expressions() {
+    fn test_map_expressions() {
         let tests = [
             (r#"{"one": 1, "two": 2, "three": 3}"#, {
                 let mut map = BTreeMap::new();

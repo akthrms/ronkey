@@ -186,7 +186,10 @@ impl Environment {
                 let index = self.eval_expression(index)?;
                 self.eval_index_expression(left, index)?
             }
-            Expression::Map(pairs) => self.eval_hash_expression(pairs)?,
+            Expression::Map(pairs) => {
+                let pairs = pairs.clone();
+                self.eval_map_expression(pairs)?
+            }
         };
 
         Ok(result)
@@ -387,7 +390,7 @@ impl Environment {
             }
             (Object::Map(pairs), _) => {
                 let pairs = pairs.clone();
-                self.eval_hash_index_expression(pairs, index)
+                self.eval_map_index_expression(pairs, index)
             }
             _ => {
                 let message = format!("index operator not supported: {}", left.get_type());
@@ -410,20 +413,20 @@ impl Environment {
         Ok(result)
     }
 
-    fn eval_hash_index_expression(
+    fn eval_map_index_expression(
         &mut self,
         pairs: BTreeMap<MapKey, MapPair>,
         index: Object,
     ) -> EvalResult {
-        let hash_key = match MapKey::from(&index) {
+        let map_key = match MapKey::from(&index) {
             MapKey::Unusable => {
-                let message = format!("unusable as hash key: {}", index.get_type());
+                let message = format!("unusable as map key: {}", index.get_type());
                 return Err(message.to_string());
             }
-            hash_key => hash_key,
+            map_key => map_key,
         };
 
-        let result = match pairs.get(&hash_key) {
+        let result = match pairs.get(&map_key) {
             Some(MapPair { value, .. }) => value.clone(),
             None => Object::Null,
         };
@@ -431,27 +434,27 @@ impl Environment {
         Ok(result)
     }
 
-    fn eval_hash_expression(&mut self, pairs: &BTreeMap<Expression, Expression>) -> EvalResult {
-        let mut pairs_result = BTreeMap::new();
+    fn eval_map_expression(&mut self, pairs: BTreeMap<Expression, Expression>) -> EvalResult {
+        let mut map = BTreeMap::new();
 
-        for (key, value) in pairs {
+        for (key, value) in pairs.iter() {
             let key = self.eval_expression(key)?;
             let value = self.eval_expression(value)?;
 
-            let hash_key = match MapKey::from(&key) {
+            let map_key = match MapKey::from(&key) {
                 MapKey::Unusable => {
-                    let message = format!("unusable as hash key: {}", key.get_type());
+                    let message = format!("unusable as map key: {}", key.get_type());
                     return Err(message.to_string());
                 }
-                hash_key => hash_key,
+                map_key => map_key,
             };
 
-            let hash_pair = MapPair::new(key, value);
+            let map_pair = MapPair::new(key, value);
 
-            pairs_result.insert(hash_key, hash_pair);
+            map.insert(map_key, map_pair);
         }
 
-        let result = Object::Map(pairs_result);
+        let result = Object::Map(map);
 
         Ok(result)
     }
@@ -679,7 +682,7 @@ mod tests {
             ),
             (
                 r#"{"name": "Monkey"}[fn(x) { x }]"#,
-                "unusable as hash key: Function",
+                "unusable as map key: Function",
             ),
         ];
 
@@ -867,7 +870,7 @@ addTwo(2);
     }
 
     #[test]
-    fn test_hash_expressions() {
+    fn test_map_expressions() {
         let input = r#"
 let two = "two";
 {"one": 10 - 9, two: 1 + 1, "thr" + "ee": 6 / 2, 4: 4, true: 5, false: 6};
@@ -909,7 +912,7 @@ let two = "two";
     }
 
     #[test]
-    fn test_hash_index_expressions() {
+    fn test_map_index_expressions() {
         let tests = [
             (r#"{"foo": 5}["foo"]"#, Object::Integer(5)),
             (r#"{"foo": 5}["bar"]"#, Object::Null),
