@@ -407,7 +407,7 @@ impl Environment {
     }
 
     fn eval_hash_expression(&mut self, pairs: &BTreeMap<Expression, Expression>) -> EvalResult {
-        let mut map = BTreeMap::new();
+        let mut pairs_result = BTreeMap::new();
 
         for (key, value) in pairs {
             let key = self.eval_expression(key)?;
@@ -423,10 +423,10 @@ impl Environment {
 
             let hash_pair = HashPair::new(key, value);
 
-            map.insert(hash_key, hash_pair);
+            pairs_result.insert(hash_key, hash_pair);
         }
 
-        let result = Object::Hash(map);
+        let result = Object::Hash(pairs_result);
 
         Ok(result)
     }
@@ -492,8 +492,9 @@ fn is_truthy(object: Object) -> bool {
 mod tests {
     use crate::evaluator::{Environment, Response};
     use crate::lexer::Lexer;
-    use crate::object::Object;
+    use crate::object::{HashKey, HashPair, Object};
     use crate::parser::Parser;
+    use std::collections::BTreeMap;
 
     fn test_eval(input: &str) -> Response {
         let mut lexer = Lexer::new(input);
@@ -833,6 +834,48 @@ addTwo(2);
                 Response::Reply(result) => assert_eq!(result, expected),
                 _ => unreachable!(),
             }
+        }
+    }
+
+    #[test]
+    fn test_hash_expressions() {
+        let input = r#"
+let two = "two";
+{"one": 10 - 9, two: 1 + 1, "thr" + "ee": 6 / 2, 4: 4, true: 5, false: 6};
+"#;
+
+        let mut pairs = BTreeMap::new();
+
+        pairs.insert(
+            HashKey::Strings("one".to_string()),
+            HashPair::new(Object::Strings("one".to_string()), Object::Integer(1)),
+        );
+        pairs.insert(
+            HashKey::Strings("two".to_string()),
+            HashPair::new(Object::Strings("two".to_string()), Object::Integer(2)),
+        );
+        pairs.insert(
+            HashKey::Strings("three".to_string()),
+            HashPair::new(Object::Strings("three".to_string()), Object::Integer(3)),
+        );
+        pairs.insert(
+            HashKey::Integer(4),
+            HashPair::new(Object::Integer(4), Object::Integer(4)),
+        );
+        pairs.insert(
+            HashKey::Boolean(true),
+            HashPair::new(Object::Boolean(true), Object::Integer(5)),
+        );
+        pairs.insert(
+            HashKey::Boolean(false),
+            HashPair::new(Object::Boolean(false), Object::Integer(6)),
+        );
+
+        let expected = Object::Hash(pairs);
+
+        match test_eval(input) {
+            Response::Reply(result) => assert_eq!(result, expected),
+            _ => unreachable!(),
         }
     }
 }
