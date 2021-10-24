@@ -73,7 +73,7 @@ impl Lexer {
             '"' => self.read_string(),
             _ => {
                 if self.is_letter() {
-                    return self.read_ident();
+                    return self.read_identifier();
                 } else if self.is_digit() {
                     return self.read_int();
                 } else {
@@ -94,16 +94,16 @@ impl Lexer {
         }
     }
 
-    fn read_ident(&mut self) -> Token {
+    fn read_identifier(&mut self) -> Token {
         let start_position = self.position;
 
         while self.is_letter() {
             self.read_char();
         }
 
-        let ident = String::from_iter(&self.input[start_position..self.position]);
+        let identifier = String::from_iter(&self.input[start_position..self.position]);
 
-        match ident.as_str() {
+        match identifier.as_str() {
             "fn" => Token::Function,
             "let" => Token::Let,
             "true" => Token::True,
@@ -111,7 +111,7 @@ impl Lexer {
             "if" => Token::If,
             "else" => Token::Else,
             "return" => Token::Return,
-            _ => Token::Ident(ident),
+            _ => Token::Identifier(identifier),
         }
     }
 
@@ -193,39 +193,39 @@ if (5 < 10) {
 
         let tests = [
             Token::Let,
-            Token::Ident("five".to_string()),
+            Token::Identifier("five".to_string()),
             Token::Assign,
             Token::Integer(5),
             Token::Semicolon,
             Token::Let,
-            Token::Ident("ten".to_string()),
+            Token::Identifier("ten".to_string()),
             Token::Assign,
             Token::Integer(10),
             Token::Semicolon,
             Token::Let,
-            Token::Ident("add".to_string()),
+            Token::Identifier("add".to_string()),
             Token::Assign,
             Token::Function,
             Token::LParen,
-            Token::Ident("x".to_string()),
+            Token::Identifier("x".to_string()),
             Token::Comma,
-            Token::Ident("y".to_string()),
+            Token::Identifier("y".to_string()),
             Token::RParen,
             Token::LBrace,
-            Token::Ident("x".to_string()),
+            Token::Identifier("x".to_string()),
             Token::Plus,
-            Token::Ident("y".to_string()),
+            Token::Identifier("y".to_string()),
             Token::Semicolon,
             Token::RBrace,
             Token::Semicolon,
             Token::Let,
-            Token::Ident("result".to_string()),
+            Token::Identifier("result".to_string()),
             Token::Assign,
-            Token::Ident("add".to_string()),
+            Token::Identifier("add".to_string()),
             Token::LParen,
-            Token::Ident("five".to_string()),
+            Token::Identifier("five".to_string()),
             Token::Comma,
-            Token::Ident("ten".to_string()),
+            Token::Identifier("ten".to_string()),
             Token::RParen,
             Token::Semicolon,
             Token::Bang,

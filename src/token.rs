@@ -9,7 +9,7 @@ pub enum Token {
 
     // 識別子 + リテラル
     /// 識別子
-    Ident(String),
+    Identifier(String),
     /// 数値
     Integer(isize),
     /// 文字列
@@ -79,7 +79,7 @@ pub enum Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Token::Ident(value) => write!(f, "{}", value),
+            Token::Identifier(value) => write!(f, "{}", value),
             Token::Integer(value) => write!(f, "Int({})", value),
             Token::String(value) => write!(f, "String({})", value),
             Token::Assign => write!(f, "="),

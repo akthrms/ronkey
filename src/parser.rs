@@ -99,7 +99,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
-        let name = Expression::Identifier(self.expect_peek_ident()?);
+        let name = Expression::Identifier(self.expect_peek_identifier()?);
 
         self.expect_peek(&Token::Assign)?;
         self.next_token();
@@ -155,7 +155,7 @@ impl<'a> Parser<'a> {
 
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParseError> {
         let mut expression = match &self.current_token {
-            Token::Ident(value) => Expression::Identifier(value.clone()),
+            Token::Identifier(value) => Expression::Identifier(value.clone()),
             Token::Integer(value) => Expression::Integer(value.clone()),
             Token::String(value) => Expression::String(value.clone()),
             Token::Bang | Token::Minus => self.parse_prefix_expression()?,
@@ -297,11 +297,11 @@ impl<'a> Parser<'a> {
             return Ok(parameters);
         }
 
-        parameters.push(Expression::Identifier(self.expect_peek_ident()?));
+        parameters.push(Expression::Identifier(self.expect_peek_identifier()?));
 
         while self.is_peek_token(&Token::Comma) {
             self.next_token();
-            parameters.push(Expression::Identifier(self.expect_peek_ident()?));
+            parameters.push(Expression::Identifier(self.expect_peek_identifier()?));
         }
 
         self.expect_peek(&Token::RParen)?;
@@ -392,9 +392,9 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    fn expect_peek_ident(&mut self) -> Result<String, ParseError> {
+    fn expect_peek_identifier(&mut self) -> Result<String, ParseError> {
         let value = match &self.peek_token {
-            Token::Ident(value) => value.to_string(),
+            Token::Identifier(value) => value.to_string(),
             _ => {
                 return Err(format!(
                     "expected next token to be Ident, got {} instead",
@@ -422,7 +422,7 @@ impl<'a> Parser<'a> {
 
     fn is_current_token(&mut self, token: &Token) -> bool {
         match (&self.current_token, token) {
-            (Token::Ident(_), Token::Ident(_)) => true,
+            (Token::Identifier(_), Token::Identifier(_)) => true,
             (Token::Integer(_), Token::Integer(_)) => true,
             _ => &self.current_token == token,
         }
@@ -430,7 +430,7 @@ impl<'a> Parser<'a> {
 
     fn is_peek_token(&mut self, token: &Token) -> bool {
         match (&self.peek_token, token) {
-            (Token::Ident(_), Token::Ident(_)) => true,
+            (Token::Identifier(_), Token::Identifier(_)) => true,
             (Token::Integer(_), Token::Integer(_)) => true,
             _ => &self.peek_token == token,
         }
