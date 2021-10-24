@@ -445,253 +445,213 @@ mod tests {
     use crate::token::Token;
     use std::collections::BTreeMap;
 
+    fn assert_statements(tests: Vec<(&str, Statement)>) {
+        for (input, expected) in tests {
+            let mut lexer = Lexer::new(input);
+            let mut parser = Parser::new(&mut lexer);
+            let program = parser.parse_program();
+
+            for error in parser.errors.iter() {
+                println!("{}", error);
+            }
+
+            assert!(parser.errors.len() == 0);
+            assert!(program.statements.len() > 0);
+
+            assert_eq!(program.statements[0], expected);
+        }
+    }
+
     #[test]
     fn test_let_statements() {
-        let input = r"
-    let x = 5;
-    let y = 10;
-    let foobar = 838383;
-    ";
-
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 3);
-
-        let tests = [
-            Statement::Let {
-                name: Expression::Identifier("x".to_string()),
-                value: Expression::Integer(5),
-            },
-            Statement::Let {
-                name: Expression::Identifier("y".to_string()),
-                value: Expression::Integer(10),
-            },
-            Statement::Let {
-                name: Expression::Identifier("foobar".to_string()),
-                value: Expression::Integer(838383),
-            },
+        let tests = vec![
+            (
+                "let x = 5;",
+                Statement::Let {
+                    name: Expression::Identifier("x".to_string()),
+                    value: Expression::Integer(5),
+                },
+            ),
+            (
+                "let y = 10;",
+                Statement::Let {
+                    name: Expression::Identifier("y".to_string()),
+                    value: Expression::Integer(10),
+                },
+            ),
+            (
+                "let foobar = 838383;",
+                Statement::Let {
+                    name: Expression::Identifier("foobar".to_string()),
+                    value: Expression::Integer(838383),
+                },
+            ),
         ];
 
-        for (statement, test) in program.statements.iter().zip(tests) {
-            assert_eq!(statement, &test);
-        }
+        assert_statements(tests);
     }
 
     #[test]
     fn test_return_statements() {
-        let input = r"
-    return 5;
-    return 10;
-    return 993322;
-    ";
-
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 3);
-
-        let tests = [
-            Statement::Return(Expression::Integer(5)),
-            Statement::Return(Expression::Integer(10)),
-            Statement::Return(Expression::Integer(993322)),
+        let tests = vec![
+            ("return 5;", Statement::Return(Expression::Integer(5))),
+            ("return 10;", Statement::Return(Expression::Integer(10))),
+            (
+                "return 993322;",
+                Statement::Return(Expression::Integer(993322)),
+            ),
         ];
 
-        for (statement, test) in program.statements.iter().zip(tests) {
-            assert_eq!(statement, &test);
-        }
+        assert_statements(tests);
     }
 
     #[test]
     fn test_identifier_expressions() {
-        let input = r"
-    foobar;
-    ";
+        let tests = vec![(
+            "foobar;",
+            Statement::Expression(Expression::Identifier("foobar".to_string())),
+        )];
 
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 1);
-
-        assert_eq!(
-            program.statements[0],
-            Statement::Expression(Expression::Identifier("foobar".to_string()))
-        );
+        assert_statements(tests);
     }
 
     #[test]
     fn test_integer_expressions() {
-        let input = r"
-    5;
-    ";
+        let tests = vec![("5;", Statement::Expression(Expression::Integer(5)))];
 
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 1);
-
-        assert_eq!(
-            program.statements[0],
-            Statement::Expression(Expression::Integer(5))
-        );
+        assert_statements(tests);
     }
 
     #[test]
     fn test_prefix_expressions() {
-        let input = r"
-    !5;
-    -15;
-    !true;
-    !false;
-    ";
-
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 4);
-
-        let tests = [
-            Statement::Expression(Expression::Prefix {
-                operator: Token::Bang,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Prefix {
-                operator: Token::Minus,
-                right: Box::new(Expression::Integer(15)),
-            }),
-            Statement::Expression(Expression::Prefix {
-                operator: Token::Bang,
-                right: Box::new(Expression::Boolean(true)),
-            }),
-            Statement::Expression(Expression::Prefix {
-                operator: Token::Bang,
-                right: Box::new(Expression::Boolean(false)),
-            }),
+        let tests = vec![
+            (
+                "!5;",
+                Statement::Expression(Expression::Prefix {
+                    operator: Token::Bang,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "-15;",
+                Statement::Expression(Expression::Prefix {
+                    operator: Token::Minus,
+                    right: Box::new(Expression::Integer(15)),
+                }),
+            ),
+            (
+                "!true;",
+                Statement::Expression(Expression::Prefix {
+                    operator: Token::Bang,
+                    right: Box::new(Expression::Boolean(true)),
+                }),
+            ),
+            (
+                "!false;",
+                Statement::Expression(Expression::Prefix {
+                    operator: Token::Bang,
+                    right: Box::new(Expression::Boolean(false)),
+                }),
+            ),
         ];
 
-        for (statement, test) in program.statements.iter().zip(tests) {
-            assert_eq!(statement, &test);
-        }
+        assert_statements(tests);
     }
 
     #[test]
     fn test_infix_expressions() {
-        let input = r"
-    5 + 5;
-    5 - 5;
-    5 * 5;
-    5 / 5;
-    5 > 5;
-    5 < 5;
-    5 == 5;
-    5 != 5;
-    true == true;
-    true != false;
-    false == false;
-    ";
-
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        for error in parser.errors.iter() {
-            println!("{}", error);
-        }
-
-        assert_eq!(parser.errors.len(), 0);
-        assert_eq!(program.statements.len(), 11);
-
-        let tests = [
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Plus,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Minus,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Asterisk,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Slash,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Gt,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Lt,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Eq,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Integer(5)),
-                operator: Token::Ne,
-                right: Box::new(Expression::Integer(5)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Boolean(true)),
-                operator: Token::Eq,
-                right: Box::new(Expression::Boolean(true)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Boolean(true)),
-                operator: Token::Ne,
-                right: Box::new(Expression::Boolean(false)),
-            }),
-            Statement::Expression(Expression::Infix {
-                left: Box::new(Expression::Boolean(false)),
-                operator: Token::Eq,
-                right: Box::new(Expression::Boolean(false)),
-            }),
+        let tests = vec![
+            (
+                "5 + 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Plus,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "5 - 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Minus,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "5 * 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Asterisk,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "5 / 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Slash,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "5 > 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Gt,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "5 < 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Lt,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "5 == 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Eq,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "5 != 5;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Integer(5)),
+                    operator: Token::Ne,
+                    right: Box::new(Expression::Integer(5)),
+                }),
+            ),
+            (
+                "true == true;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Boolean(true)),
+                    operator: Token::Eq,
+                    right: Box::new(Expression::Boolean(true)),
+                }),
+            ),
+            (
+                "true != false;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Boolean(true)),
+                    operator: Token::Ne,
+                    right: Box::new(Expression::Boolean(false)),
+                }),
+            ),
+            (
+                "false == false;",
+                Statement::Expression(Expression::Infix {
+                    left: Box::new(Expression::Boolean(false)),
+                    operator: Token::Eq,
+                    right: Box::new(Expression::Boolean(false)),
+                }),
+            ),
         ];
 
-        for (statement, test) in program.statements.iter().zip(tests) {
-            assert_eq!(statement, &test);
-        }
+        assert_statements(tests);
     }
 
     #[test]
