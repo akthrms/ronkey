@@ -756,13 +756,13 @@ mod tests {
 
     #[test]
     fn test_closures() {
-        let input = r"
-let newAdder = fn(x) {
-    fn(y) { x + y };
-};
-let addTwo = newAdder(2);
-addTwo(2);
-";
+        let input = "
+        let newAdder = fn(x) {
+            fn(y) { x + y };
+        };
+        let addTwo = newAdder(2);
+        addTwo(2);
+        ";
 
         let expected = Object::Integer(4);
 
@@ -836,9 +836,9 @@ addTwo(2);
     #[test]
     fn test_map_expressions() {
         let input = r#"
-let two = "two";
-{"one": 10 - 9, two: 1 + 1, "thr" + "ee": 6 / 2, 4: 4, true: 5, false: 6};
-"#;
+        let two = "two";
+        {"one": 10 - 9, two: 1 + 1, "thr" + "ee": 6 / 2, 4: 4, true: 5, false: 6};
+        "#;
 
         let mut pairs = BTreeMap::new();
 
