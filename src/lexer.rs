@@ -75,7 +75,7 @@ impl Lexer {
                 if self.is_letter() {
                     return self.read_identifier();
                 } else if self.is_digit() {
-                    return self.read_int();
+                    return self.read_integer();
                 } else {
                     Token::Illegal(self.ch)
                 }
@@ -115,7 +115,7 @@ impl Lexer {
         }
     }
 
-    fn read_int(&mut self) -> Token {
+    fn read_integer(&mut self) -> Token {
         let start_position = self.position;
 
         while self.is_digit() {

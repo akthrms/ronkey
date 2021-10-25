@@ -166,11 +166,13 @@ impl<'a> Parser<'a> {
             Token::Function => self.parse_function_expression()?,
             Token::LBracket => self.parse_array_expression()?,
             Token::LBrace => self.parse_map_expression()?,
+            Token::Illegal(value) => {
+                let message = format!("illegal char found: {}", value);
+                return Err(message);
+            }
             _ => {
-                return Err(format!(
-                    "no prefix parse function for {} found",
-                    self.current_token
-                ))
+                let message = format!("no prefix parse function for {} found", self.current_token);
+                return Err(message);
             }
         };
 
@@ -196,6 +198,10 @@ impl<'a> Parser<'a> {
                 &Token::LBracket => {
                     self.next_token();
                     self.parse_index_expression(expression)?
+                }
+                &Token::Illegal(value) => {
+                    let message = format!("illegal char found: {}", value);
+                    return Err(message);
                 }
                 _ => expression,
             };
