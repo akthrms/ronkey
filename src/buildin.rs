@@ -23,6 +23,7 @@ fn len(arguments: Vec<Object>) -> EvalResult {
 
     let result = match &arguments[0] {
         Object::String(value) => Object::Integer(value.len() as isize),
+        Object::Array(values) => Object::Integer(values.len() as isize),
         _ => {
             let message = format!(
                 "argument to `len` not supported, got {}",
